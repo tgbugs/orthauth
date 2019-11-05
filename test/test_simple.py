@@ -14,7 +14,6 @@ class TestSimple(unittest.TestCase):
         print(self.cs)
         assert self.cs.dynamic_config.path == self.cs.dynamic_config_path, 'big oops'
 
-    @pytest.mark.skip('not ready')
     def test_load(self):
         @self.cs.tangential_auth('api_key', 'name-that-goes-in-code')
         class Test:

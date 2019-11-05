@@ -102,6 +102,7 @@ class ConfigStatic(Config):  # FIXME this is more a schema?
         # shadowing
         # shadowed
         # paths
+        name_config
 
 
 class ConfigDynamic(Config):
@@ -132,6 +133,18 @@ class ConfigDynamic(Config):
         self = super().__new__(cls, path)
         self.static_config = static_config
         return self
+
+    @property
+    def _managed_paths(self):
+        out = {}
+        types = self.from_type('types')
+
+
+    def _path_source(self, *names):
+        mp = self._managed_paths
+        if names in mp:
+            lookup_function = mp[names]
+            lookup_function(*names)
 
     @property
     def secrets_path(self):
