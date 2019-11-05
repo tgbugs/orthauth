@@ -1,0 +1,26 @@
+types:  # per dynamic config only 1 source per type
+  orthauth-secrets:
+    path: secrets-test-1.yaml  # relative paths start from the location of the config in question
+    # path: ~/.config/orthauth/secrets.yaml  # default ...
+    managed-paths:
+      - *
+  auth-sources:
+    path: ~/.emacs.d/authinfo
+    managed-paths:
+      magithub:
+      some:
+        other:
+          path:
+  mypass:
+    path: ~/.mypass
+    managed-paths:
+      mysql:
+        {{ myproduser }}:
+        {{ mytestuser }}:
+insecure-dynamic-variables:
+  insecure-dynamic-env: HIGH_PRIORITY_API_KEY
+  insecure-key-from-dynamic-conifg-variable: usernames-that-varies
+  variable: also-here
+  api-user-1: some-user
+  api-user-2: some-other-user
+

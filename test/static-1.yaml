@@ -1,0 +1,30 @@
+dynamic-config-search-paths:
+  - dynamic-1.yaml  # for test
+  - ~/.config/program-name/config.yaml
+  - /etc/program-name/config.{sxml,yaml,rkt,lisp}
+insecure-static-variables:
+  name-that-goes-in-code:
+    environment-variables:
+      shadowing: HIGHEST_PRIORITY HIGHER_PRIORITY_API_KEY {{ insecure-dynamic-env }}
+      shadowed: LOW_PRIORITY_API_KEY LOWEST_PRIORITY_API_KEY
+    paths:  # alternate syntax ? maybe ?
+    - ['look', 'here', 'first']
+    - ['look', 'here', 'second']
+    - ['look', "{{ variable }}", 'third']
+    insecure-paths-to-secret:
+      secret:
+        path:
+          1:
+          2:
+      failover-secret:
+        path:
+      path:
+        with:
+          "{{ insecure-key-from-dynamic-conifg-variable }}":
+            in-the:
+              path:
+      api:
+        "{{ api-user-1 }}":  # tried first
+        "{{ api-user-2 }}":  # tried second
+  
+  other-name-that-goes-in-code:

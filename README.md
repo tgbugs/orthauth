@@ -21,7 +21,11 @@ set to `0700`).
 
 For example running a program in the following way
 `export API_KEY=lolplzdonotstealthis; ./my-script-that-needs-the-key`
-or using a file like `~/.pgpass` or emacs `.authinfo`.
+or using a file like `~/.pgpass` or emacs `.authinfo`. Note that
+pgpass probably shouldn't be a source for most python implementations
+because libraries like psycopg2 are able to read it directly. However in
+other languages that do not have a library that supports reading from pgpass
+directly, then pgpass would be a useful source.
 
 By making it possible to provide credentials seemlessley in multiple ways
 the hope is to reduce the use of different solutions in different environments
