@@ -33,7 +33,21 @@ service:
 #+end_src
 ** Python
 Include the following in =config.py=, =utils.py=, or similar.
-#+begin_src python :tangle
+#+begin_src python :tangle examples/config.py
+import pathlib
 import orthauth as oa
-oa.configure('examples/auth-config.yaml')
+auth = oa.configure(pathlib.Path(__file__).parent / 'auth-config.yaml')
+has_api_key = auth.tangential_auth('api_key', 'service-api-key')
+#+end_src
+Use 
+#+begin_src python :tangle examples/config.py
+from config import auth, has_api_key
+
+@has_api_key
+class MyClassThatMakesApiCalls:
+    def leak_api_key(self):
+        print(self.api_key)
+
+instance = MyClassThatMakesApiCalls()
+print(instance.leak_api_key())
 #+end_src
