@@ -15,11 +15,28 @@ class TestSimple(unittest.TestCase):
         assert self.auth.dynamic_config._path == self.auth.dynamic_config_path, 'big oops'
 
     def test_load(self):
-        @self.auth.tangential_auth('api_key', 'full-complexity-example')
+        @self.auth.tangential('api_key', 'full-complexity-example')
         class Test:
             pass
 
         assert Test.api_key, [d for d in dir(Test) if not d.startswith('__')]
+
+    def test_asProperty(self):
+        @self.auth.tangential('api_key', 'full-complexity-example', asProperty=True)
+        class Test:
+            pass
+
+        tv = 'oh-no-my-api-key-is-on-github-!'
+        assert Test().api_key == tv, [d for d in dir(Test) if not d.startswith('__')]
+
+    def test_asProperty_at_decoration_time(self):
+        dec = self.auth.tangential('api_key', 'full-complexity-example')
+        @dec(asProperty=True)
+        class Test:
+            pass
+
+        tv = 'oh-no-my-api-key-is-on-github-!'
+        assert Test().api_key == tv, [d for d in dir(Test) if not d.startswith('__')]
 
     def test_path_list_variant(self):
         assert self.auth.get('paths-as-list-example') == 'lol'

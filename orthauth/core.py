@@ -148,24 +148,32 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
         return blob
 
-    def tangential_auth(self, inject_value, with_name, when=True, asProperty=False):
+    def tangential(self, inject_value, with_name, when=True, asProperty=False):
         """ class decorator
             the tangential auth decorator makes a name available to
             all instances of a class from class creation time, this
             this is not fully orthogonal, but makes it easier to
             separate the logic of an API from the logic of its auth """
 
-        if asProperty:  # TODO also support adding asProperty to cdecorator
-            @property
-            def tangential_property(self, inner_self=self, name=with_name):
-                return inner_self.get(name)
+        @property
+        def tangential_property(self, inner_self=self, name=with_name):
+            return inner_self.get(name)
 
+        if asProperty:
             value = tangential_property
         else:
             value = self.get(with_name)
 
-        def cdecorator(cls):
-            setattr(cls, inject_value, value)
+        def cdecorator(cls=None, asProperty=asProperty):
+            if cls is None and asProperty:
+                def inner_cdec(icls):
+                    setattr(icls, inject_value, tangential_property)
+                    return icls
+
+                return inner_cdec
+            else:
+                setattr(cls, inject_value, value)
+
             return cls
 
         return cdecorator
