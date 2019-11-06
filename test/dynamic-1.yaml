@@ -15,19 +15,39 @@ path-sources:  # on failure to match only secrets is searched
   magithub other: secrets
   hrm does this: secrets
   hrm does {other-variable} work: secrets
-variables:
-  insecure-dynamic-env: HIGH_PRIORITY_API_KEY
-  insecure-key-from-dynamic-conifg-variable: usernames-that-varies
-  variable: also-here
-  api-user-1: some-user
-  api-user-2: some-other-user
-  other-variable: yep itsa variable and it shouldn't have spaces in it ...
-  yay: WHAT HAVE YOU DONE
 auth-variables:
   env-example:
     environment-variables: I_PREFER_MY_OWN_ENV_VARS_THANK_YOU_VERY_MUCH
   paths-example:  # path must be defined in the user config otherwise failure will ensue
+    path: user defined path to key
+  full-complexity-example:
+    environment-variables:
+      shading: HIGHEST_PRIORITY HIGHER_PRIORITY_API_KEY {insecure-dynamic-env}
+      shaded: LOW_PRIORITY_API_KEY LOWEST_PRIORITY_API_KEY
+      #dev: MY_PROD_VAR  # do dynamic options work here? no, because we don't know the checking logic
+      #test: MY_TEST_VAR
+    paths:  # alternate syntax ? maybe ?
+    - look here first
+    - look here second
+    - look {variable} third
+    paths-nested:  # insecure nested paths to secret
+      secret:
+        path:
+          1:
+          2:
+      failover-secret:
+        path:
+      path:
+        with:
+          "{insecure-key-from-dynamic-conifg-variable}":
+            in-the:
+              path:
+      api:
+        some-user:
+        some-other-user:
+  
+  paths-as-list-example:
     paths:
-      - key
-      - this is also a valid path {yay}
-      - yet another acceptable path
+      - ['k1', 'k2']
+      - ['k3', 'k4']
+

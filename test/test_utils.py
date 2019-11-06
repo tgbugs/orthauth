@@ -1,5 +1,5 @@
 import unittest
-from orthauth.utils import branches, parse_and_expand_paths
+from orthauth.utils import branches, parse_paths
 from orthauth import exceptions as exc
 
 tree = {
@@ -21,30 +21,16 @@ class TestBranches(unittest.TestCase):
         ]
 
 
-variables = {
-    'this': 'OK',
-}
 paths = [
-    'hello {this} is a path',
+    'hello OK is a path',
     ['so', 'is', 'this'],
     [1, 2, 3],
     ['a', 1],
 ]
 
-bad_paths = [
-    'this {var} does not exist'
-]
-
 
 class TestParseAndExandPaths(unittest.TestCase):
     def test_parse(self):
-        l = list(parse_and_expand_paths(paths, variables))
+        l = list(parse_paths(paths))
         assert l[0] == ['hello', 'OK', 'is', 'a', 'path']
         assert l[3] == ['a', '1']
-
-    def test_parse_fail(self):
-        try:
-            list(parse_and_expand_paths(bad_paths, variables))
-            raise AssertionError('should fail')
-        except exc.VariableNotDefinedError:
-                pass

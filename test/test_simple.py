@@ -25,7 +25,10 @@ class TestSimple(unittest.TestCase):
         assert self.auth.get('paths-as-list-example') == 'lol'
 
     def test_path_strings(self):
-        assert self.auth.get('paths-example') == 'OOOOOOH NOOOOOOOOO!'
+        assert self.auth.get('paths-example') == 'yay!'
 
     def test_implicit_env(self):
         assert self.auth.get('env-example') == os.environ.get('USER', None)
+
+    def test_default(self):
+        assert self.auth.get('default-example') == '42'

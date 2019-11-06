@@ -39,7 +39,7 @@ def branches(tree):
                 yield [name, *subbranch]
 
 
-def parse_and_expand_paths(raw_paths, variables):
+def parse_paths(raw_paths):
     for elements in raw_paths:
         if isinstance(elements, str):
             elements = elements.split(' ')
@@ -49,12 +49,6 @@ def parse_and_expand_paths(raw_paths, variables):
         for element in elements:
             if isinstance(element, int):
                 element = str(element)
-            elif element.startswith('{'):
-                try:
-                    element = element.format(**variables)
-                except KeyError as e:
-                    var = element.strip('{').rstrip('}')
-                    raise exc.VariableNotDefinedError(f'variable {var!r} is not defined') from e
 
             path.append(element)
 

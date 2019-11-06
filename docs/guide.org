@@ -1,3 +1,4 @@
+#+TITLE: orthauth user guide
 
 * Example
 ** Config files
@@ -5,26 +6,30 @@
 #+begin_src yaml :tangle examples/auth-config.yaml
 config-search-paths:
   - examples/user-config.yaml
-variables:
+auth-variables:
   service-api-key:
     environment-variables: SERVICE_API_KEY
-    paths:
-      - service
   service-port:
     environment-variables: SERVICE_PORT
-    config-variable: {port}
+    default: 808080
+  service-host:
+    environment-variables: SERVICE_HOST
+    default: localhost
 #+end_src
 #+NAME: user-config
 #+begin_src yaml :tangle examples/user-config.yaml
 auth-stores:
   secrets:
     path: examples/secrets-example.yaml
-variables:
-  host: localhost
-  port: 80
+auth-variables:
+  service-api-key:
+    path: service specific-user
+  service-host: 0.0.0.0
+  service-port: 80
 #+end_src
 #+begin_src yaml :tangle examples/secrets.yaml
-service: oh look and api key!
+service:
+  specific-user: oh look an api key!
 #+end_src
 ** Python
 Include the following in =config.py=, =utils.py=, or similar.

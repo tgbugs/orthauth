@@ -3,7 +3,7 @@ import ast
 import stat
 import pathlib
 from . import exceptions as exc
-from .utils import branches, getenv, parse_and_expand_paths
+from .utils import branches, getenv, parse_paths
 from .utils import log, logd
 from .utils import QuietDict
 
@@ -16,6 +16,7 @@ except ImportError as e:
 def configure(auth_config_path):
     """ oa.configure(__file__) """
     return AuthConfig(auth_config_path)
+
 
 class ConfigBase:
     def __new__(cls, path):
@@ -72,6 +73,41 @@ class ConfigBase:
 
         return current
 
+    @staticmethod
+    def _envars(var_config):
+        envars = []
+        # env
+        for evkey in ('environment-variables', 'env-vars'):
+            if evkey in var_config:
+                ev = var_config[evkey]
+                if isinstance(ev, str):
+                    envars += ev.split(' ')
+                else:
+                    if 'envars' in ev:
+                        envars += ev['envars'].split(' ')
+
+        return envars
+
+    @staticmethod
+    def _paths(var_config):
+        raw_paths = []
+        # paths
+        if 'path' in var_config:
+            raw_paths += [var_config['path']]
+
+        if 'paths' in var_config:
+            raw_paths += var_config['paths']
+
+        if 'paths-nested' in var_config:
+            raw_paths += list(branches(var_config['paths-nested']))
+
+        try:
+            paths = list(parse_paths(raw_paths))
+        except exc.VariableNotDefinedError as e:
+            raise e  # TODO message about where missing from
+
+        return paths
+
 
 class AuthConfig(ConfigBase):  # FIXME this is more a schema?
     """ Object representation of a static configuration file
@@ -107,9 +143,6 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def from_type(self, *names):
         blob = self._from_type(*names)
-        if blob is None:
-            blob = self.dynamic_config.from_type(*names)
-
         if blob is None:
             raise KeyError(f'{names}')
 
@@ -156,42 +189,44 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def _check(self):
         """ make sure restrictions on config structure are satisfied """
-        variables
+        raise NotImplementedError
 
     def get(self, variable_name):
         """ look up the value of a variable name from auth store or config """
-        variable_config = self.from_type('auth-variables', variable_name)
-        shading = []
-        shaded = []
-        # env
-        for evkey in ('environment-variables', 'env-vars'):
-            if evkey in variable_config:
-                ev = variable_config[evkey]
-                if isinstance(ev, str):
-                    shading += ev.split(' ')
-                else:
-                    if 'shading' in ev:
-                        shading += ev['shading'].split(' ')
-
-                    if 'shaded' in ev:
-                        shaded += ev['shaded'].split(' ')
-
-        raw_paths = []
-        # paths
-        if 'paths' in variable_config:
-            raw_paths += variable_config['paths']
-
-        if 'paths-nested' in variable_config:
-            raw_paths += list(branches(variable_config['paths-nested']))
-
-        dynamic_variables = self.dynamic_config.variables
         try:
-            paths = list(parse_and_expand_paths(raw_paths, dynamic_variables))
-        except exc.VariableNotDefinedError as e:
-            logd.error(f'variable missing in {self.dynamic_config_path}')
-            raise e  # TODO message about where missing from
+            dvar_config = self.dynamic_config.from_type('auth-variables', variable_name)
+            f1 = False
+        except KeyError as e:
+            f1 = e
+            dvar_config = {}
 
-        for f, v in zip((getenv, self._get, getenv), (shading, paths, shaded)):
+        try:
+            var_config = self.from_type('auth-variables', variable_name)
+            f2 = False
+        except KeyError as e:
+            f2 = e
+            var_config = {}
+
+        if f1 and f2:
+            raise f2 from f1
+
+        defaults = []
+        if not isinstance(dvar_config, dict):
+            defaults.append(dvar_config)
+            dvar_config = {}
+
+        if not isinstance(var_config, dict):
+            defaults.append(var_config)
+            var_config = {}
+        elif 'default' in var_config:
+            defaults.append(var_config['default'])
+
+        envars = self._envars(dvar_config)
+        envars += self._envars(var_config)
+        paths = self._paths(dvar_config)
+        paths += self._paths(var_config)
+
+        for f, v in zip((getenv, self._get, lambda d: (str(d[0]) if d else None)), (envars, paths, defaults)):
             if v:
                 SECRET = f(v)
                 if SECRET is not None:
@@ -253,19 +288,14 @@ class UserConfig(ConfigBase):
         return self._secrets(self.from_type('auth-stores', 'secrets'))
 
     @property
-    def variables(self):
-        return self.from_type('variables')
-
-    @property
     def _path_sources(self):
         # FIXME from type reads twice, should only read once
-        variables = self.variables
         path_data = self.from_type('path-sources')
         store_data = self.from_type('auth-stores')
         out = {}
         for raw_path, type_ in path_data.items():
             try:
-                names = tuple(next(parse_and_expand_paths([raw_path], variables)))
+                names = tuple(next(parse_paths([raw_path])))
             except exc.VariableNotDefinedError as e:
                 logd.error(f'variable missing in {self._path}')
                 raise e  # TODO message about where missing from
