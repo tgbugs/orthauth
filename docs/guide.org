@@ -5,7 +5,7 @@
 #+NAME: auth-config
 #+begin_src yaml :tangle examples/auth-config.yaml
 config-search-paths:
-  - examples/user-config.yaml
+  - user-config.yaml
 auth-variables:
   service-api-key:
     environment-variables: SERVICE_API_KEY
@@ -20,14 +20,14 @@ auth-variables:
 #+begin_src yaml :tangle examples/user-config.yaml
 auth-stores:
   secrets:
-    path: examples/secrets-example.yaml
+    path: secrets.yaml
 auth-variables:
   service-api-key:
     path: service specific-user
   service-host: 0.0.0.0
   service-port: 80
 #+end_src
-#+begin_src yaml :tangle examples/secrets.yaml
+#+begin_src yaml :tangle examples/secrets.yaml :tangle-mode (identity #o0600)
 service:
   specific-user: oh look an api key!
 #+end_src
@@ -39,15 +39,16 @@ import orthauth as oa
 auth = oa.configure(pathlib.Path(__file__).parent / 'auth-config.yaml')
 has_api_key = auth.tangential('api_key', 'service-api-key')
 #+end_src
+
 Use 
 #+begin_src python :tangle examples/simple.py
 from config import auth, has_api_key
 
-@has_api_key
+@has_api_key(atInit=True)
 class MyClassThatMakesApiCalls:
     def leak_api_key(self):
-        print(self.api_key)
+        print(f'exfiltrating ... {self.api_key!r}')
 
 instance = MyClassThatMakesApiCalls()
-print(instance.leak_api_key())
+instance.leak_api_key()
 #+end_src

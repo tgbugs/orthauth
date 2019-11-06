@@ -50,4 +50,9 @@ auth-variables:
     paths:
       - ['k1', 'k2']
       - ['k3', 'k4']
-
+  test-as-property:
+    path: api as-property
+  test-at-init:
+    path: api at-init
+  test-tang-init: tiapi  # don't do this irl please
+  test-value-2: a dynamic value

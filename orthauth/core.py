@@ -2,6 +2,7 @@ import os
 import ast
 import stat
 import pathlib
+import functools
 from . import exceptions as exc
 from .utils import branches, getenv, parse_paths
 from .utils import log, logd
@@ -56,7 +57,6 @@ class ConfigBase:
             raise ValueError(f'Your config path is incomplete.')
 
         return current
-
 
     def _from_yaml(self, *names, fail=False):
         if not names:
@@ -148,31 +148,61 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
         return blob
 
-    def tangential(self, inject_value, with_name, when=True, asProperty=False):
+    def tangential_init(self, inject_value, with_name, when=True):
+        """ tangential decorator that defaults to atInit since it is a common use case """
+        return self.tangential(inject_value, with_name, when=when, atInit=True)
+
+    def tangential(self, inject_value, with_name, when=True, asProperty=False, atInit=False):
         """ class decorator
             the tangential auth decorator makes a name available to
             all instances of a class from class creation time, this
             this is not fully orthogonal, but makes it easier to
             separate the logic of an API from the logic of its auth """
 
+        if asProperty and atInit:
+            raise ValueError('asProperty and atInit are mutually exclusive')
+
         @property
         def tangential_property(self, inner_self=self, name=with_name):
             return inner_self.get(name)
 
-        if asProperty:
-            value = tangential_property
-        else:
-            value = self.get(with_name)
+        def cdecorator(cls=None, asProperty=asProperty, atInit=atInit):
+            if asProperty and atInit:
+                raise ValueError('asProperty and atInit are mutually exclusive')
 
-        def cdecorator(cls=None, asProperty=asProperty):
-            if cls is None and asProperty:
-                def inner_cdec(icls):
-                    setattr(icls, inject_value, tangential_property)
-                    return icls
+            if cls is None:
+                if asProperty:
+                    def inner_cdec(icls):
+                        setattr(icls, inject_value, tangential_property)
+                        return icls
 
-                return inner_cdec
+                    return inner_cdec
+                elif atInit:
+                    def inner_cdec(icls):
+                        cls__init__ = cls.__init__
+                        @functools.wraps(cls__init__)
+                        def init(inner_self, *args, **kwargs):
+                            setattr(inner_self, inject_value, self.get(with_name))
+                            cls__init__(inner_self, *args, **kwargs)
+
+                        setattr(icls, '__init__', init)
+                        return icls
+
+                    return inner_cdec
+                else:
+                    raise TypeError('HOW?!')
+            elif asProperty:
+                setattr(cls, inject_value, tangential_property)
+            elif atInit:
+                cls__init__ = cls.__init__
+                @functools.wraps(cls__init__)
+                def init(inner_self, *args, **kwargs):
+                    setattr(inner_self, inject_value, self.get(with_name))
+                    cls__init__(inner_self, *args, **kwargs)
+
+                setattr(cls, '__init__', init)
             else:
-                setattr(cls, inject_value, value)
+                setattr(cls, inject_value, self.get(with_name))
 
             return cls
 
@@ -306,7 +336,11 @@ class UserConfig(ConfigBase):
     @property
     def _path_sources(self):
         # FIXME from type reads twice, should only read once
-        path_data = self.from_type('path-sources')
+        try:
+            path_data = self.from_type('path-sources')
+        except KeyError:
+            return {}
+
         store_data = self.from_type('auth-stores')
         out = {}
         for raw_path, type_ in path_data.items():

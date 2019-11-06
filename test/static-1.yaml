@@ -19,3 +19,8 @@ auth-variables:  # insecure static variables
     path: suggest path
   paths-as-list-example:
     path: ['k1', 'k2']
+  test-as-property:
+  test-at-init:
+  test-tang-init:
+  test-value-1: a static value
+  test-value-2: a value that will be overwritten
