@@ -163,8 +163,8 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
             raise ValueError('asProperty and atInit are mutually exclusive')
 
         @property
-        def tangential_property(self, inner_self=self, name=with_name):
-            return inner_self.get(name)
+        def tangential_property(self, outer_self=self, name=with_name):
+            return outer_self.get(name)
 
         def cdecorator(cls=None, asProperty=asProperty, atInit=atInit):
             if asProperty and atInit:
@@ -305,6 +305,7 @@ class UserConfig(ConfigBase):
                 'secrets': self._secrets,
                 'authinfo': self._authinfo,
                 'mypass': self._mypass,
+                'ssh-config': self._ssh_config,
             }[type_]
         except KeyError as e:
             raise exc.UnknownAuthStoreType(type_)
@@ -316,7 +317,10 @@ class UserConfig(ConfigBase):
         return Secrets(self._blob_path(blob))
 
     def _mypass(self, blob):
-        return Secrets(self._blob_path(blob))
+        return Mypass(self._blob_path(blob))
+
+    def _ssh_config(self, blob):
+        return SshConfig(self._blob_path(blob))
 
     def _blob_path(self, blob):
         path = pathlib.Path(blob['path'])
@@ -380,6 +384,28 @@ class Authinfo:
         raise NotImplementedError('TODO')
 
 
+class Mypass:
+    def __init__(self, path):
+        if isinstance(path, str):
+            path = pathlib.Path(path)
+
+        self._path = path
+
+    def __call__(self, *names):
+        raise NotImplementedError('TODO')
+
+
+class SshConfig:
+    def __init__(self, path):
+        if isinstance(path, str):
+            path = pathlib.Path(path)
+
+        self._path = path
+
+    def __call__(self, *names):
+        raise NotImplementedError('TODO')
+
+
 class Secrets:
     def __init__(self, path):
         if isinstance(path, str):
@@ -399,6 +425,7 @@ class Secrets:
 
     @property
     def exists(self):
+        """ Fail early and often when missing a file that is supposed to exist """
         e = self._path.exists()
         if not e:
             raise FileNotFoundError(self._path)

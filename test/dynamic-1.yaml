@@ -7,6 +7,8 @@ auth-stores:  # per dynamic config only 1 source per type
     path: ~/.authinfo
   mypass:
     path: ~/.mypass
+  ssh-config:
+    path: ~/.ssh/config
   other:
     key-relevant-for-some-non-file-based-store
 path-sources:  # on failure to match only secrets is searched
@@ -14,7 +16,6 @@ path-sources:  # on failure to match only secrets is searched
   magithub: authinfo
   magithub other: secrets
   hrm does this: secrets
-  hrm does {other-variable} work: secrets
 auth-variables:
   env-example:
     environment-variables: I_PREFER_MY_OWN_ENV_VARS_THANK_YOU_VERY_MUCH
@@ -29,7 +30,6 @@ auth-variables:
     paths:  # alternate syntax ? maybe ?
     - look here first
     - look here second
-    - look {variable} third
     paths-nested:  # insecure nested paths to secret
       secret:
         path:
@@ -39,7 +39,7 @@ auth-variables:
         path:
       path:
         with:
-          "{insecure-key-from-dynamic-conifg-variable}":
+          hrm:
             in-the:
               path:
       api:
