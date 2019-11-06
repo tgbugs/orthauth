@@ -5,12 +5,12 @@ dynamic-config-search-paths:
 insecure-static-variables:
   name-that-goes-in-code:
     environment-variables:
-      shadowing: HIGHEST_PRIORITY HIGHER_PRIORITY_API_KEY {{ insecure-dynamic-env }}
-      shadowed: LOW_PRIORITY_API_KEY LOWEST_PRIORITY_API_KEY
+      shading: HIGHEST_PRIORITY HIGHER_PRIORITY_API_KEY {insecure-dynamic-env}
+      shaded: LOW_PRIORITY_API_KEY LOWEST_PRIORITY_API_KEY
     paths:  # alternate syntax ? maybe ?
-    - ['look', 'here', 'first']
-    - ['look', 'here', 'second']
-    - ['look', "{{ variable }}", 'third']
+    - look here first
+    - look here second
+    - look {variable} second
     insecure-paths-to-secret:
       secret:
         path:
@@ -20,11 +20,22 @@ insecure-static-variables:
         path:
       path:
         with:
-          "{{ insecure-key-from-dynamic-conifg-variable }}":
+          "{insecure-key-from-dynamic-conifg-variable}":
             in-the:
               path:
       api:
-        "{{ api-user-1 }}":  # tried first
-        "{{ api-user-2 }}":  # tried second
+        "{api-user-1}":  # tried first
+        "{api-user-2}":  # tried second
   
   other-name-that-goes-in-code:
+    paths:
+      - ['k1', 'k2']
+      - ['k3', 'k4']
+
+  paths-example:
+    paths:
+      - yet another acceptable path
+      - this is also a valid path {yay}
+
+  env-example:
+    environment-variables: IMPLICITLY_SHADING_VARIABLES USER GROUP

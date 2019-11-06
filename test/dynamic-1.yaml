@@ -1,26 +1,25 @@
-types:  # per dynamic config only 1 source per type
-  orthauth-secrets:
+auth-stores:  # per dynamic config only 1 source per type
+  # list in order of precedence ??
+  secrets:
     path: secrets-test-1.yaml  # relative paths start from the location of the config in question
     # path: ~/.config/orthauth/secrets.yaml  # default ...
-    managed-paths:
-      - *
-  auth-sources:
-    path: ~/.emacs.d/authinfo
-    managed-paths:
-      magithub:
-      some:
-        other:
-          path:
+  authinfo:
+    path: ~/.authinfo
   mypass:
     path: ~/.mypass
-    managed-paths:
-      mysql:
-        {{ myproduser }}:
-        {{ mytestuser }}:
+  other:
+    key-relevant-for-some-non-file-based-store
+path-sources:  # on failure to match only secrets is searched
+  mysql: mypass
+  magithub: authinfo
+  magithub other: secrets
+  hrm does this: secrets
+  hrm does {other-variable} work: secrets
 insecure-dynamic-variables:
   insecure-dynamic-env: HIGH_PRIORITY_API_KEY
   insecure-key-from-dynamic-conifg-variable: usernames-that-varies
   variable: also-here
   api-user-1: some-user
   api-user-2: some-other-user
-
+  other-variable: yep itsa variable and it shouldn't have spaces in it ...
+  yay: WHAT HAVE YOU DONE

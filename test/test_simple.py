@@ -1,5 +1,6 @@
-import unittest
+import os
 import pathlib
+import unittest
 import pytest
 from orthauth import ConfigStatic
 
@@ -20,3 +21,12 @@ class TestSimple(unittest.TestCase):
             pass
 
         assert Test.api_key, [d for d in dir(Test) if not d.startswith('__')]
+
+    def test_path_list_variant(self):
+        assert self.cs('other-name-that-goes-in-code') == 'lol'
+
+    def test_path_strings(self):
+        assert self.cs('paths-example') == 'OOOOOOH NOOOOOOOOO!'
+
+    def test_implicit_env(self):
+        assert self.cs('env-example') == os.environ.get('USER', None)
