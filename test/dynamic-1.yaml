@@ -15,7 +15,7 @@ path-sources:  # on failure to match only secrets is searched
   magithub other: secrets
   hrm does this: secrets
   hrm does {other-variable} work: secrets
-insecure-dynamic-variables:
+variables:
   insecure-dynamic-env: HIGH_PRIORITY_API_KEY
   insecure-key-from-dynamic-conifg-variable: usernames-that-varies
   variable: also-here
@@ -23,3 +23,11 @@ insecure-dynamic-variables:
   api-user-2: some-other-user
   other-variable: yep itsa variable and it shouldn't have spaces in it ...
   yay: WHAT HAVE YOU DONE
+auth-variables:
+  env-example:
+    environment-variables: I_PREFER_MY_OWN_ENV_VARS_THANK_YOU_VERY_MUCH
+  paths-example:  # path must be defined in the user config otherwise failure will ensue
+    paths:
+      - key
+      - this is also a valid path {yay}
+      - yet another acceptable path

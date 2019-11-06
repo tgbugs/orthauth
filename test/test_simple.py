@@ -1,32 +1,31 @@
 import os
-import pathlib
 import unittest
 import pytest
-from orthauth import ConfigStatic
+import orthauth as oa
+from .common import test_folder
 
-test_folder = pathlib.Path(__file__).parent
 
 class TestSimple(unittest.TestCase):
     def setUp(self):
         sc = test_folder / 'static-1.yaml'
-        self.cs = ConfigStatic(sc)
+        self.auth = oa.AuthConfig(sc)
 
     def test_dynamic(self):
-        print(self.cs)
-        assert self.cs.dynamic_config.path == self.cs.dynamic_config_path, 'big oops'
+        print(self.auth)
+        assert self.auth.dynamic_config._path == self.auth.dynamic_config_path, 'big oops'
 
     def test_load(self):
-        @self.cs.tangential_auth('api_key', 'name-that-goes-in-code')
+        @self.auth.tangential_auth('api_key', 'full-complexity-example')
         class Test:
             pass
 
         assert Test.api_key, [d for d in dir(Test) if not d.startswith('__')]
 
     def test_path_list_variant(self):
-        assert self.cs('other-name-that-goes-in-code') == 'lol'
+        assert self.auth.get('paths-as-list-example') == 'lol'
 
     def test_path_strings(self):
-        assert self.cs('paths-example') == 'OOOOOOH NOOOOOOOOO!'
+        assert self.auth.get('paths-example') == 'OOOOOOH NOOOOOOOOO!'
 
     def test_implicit_env(self):
-        assert self.cs('env-example') == os.environ.get('USER', None)
+        assert self.auth.get('env-example') == os.environ.get('USER', None)

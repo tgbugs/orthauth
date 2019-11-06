@@ -101,6 +101,3 @@ class QuietDict(dict):
 
     def __reduce__(self):
         return (dict, {})
-
-
-

@@ -1,5 +1,5 @@
 import os
-import yaml  # FIXME DANGERZONE :/
+import ast
 import stat
 import pathlib
 from . import exceptions as exc
@@ -7,8 +7,17 @@ from .utils import branches, getenv, parse_and_expand_paths
 from .utils import log, logd
 from .utils import QuietDict
 
+try:
+    import yaml  # FIXME DANGERZONE :/
+except ImportError as e:
+    pass
 
-class Config:
+
+def configure(auth_config_path):
+    """ oa.configure(__file__) """
+    return AuthConfig(auth_config_path)
+
+class ConfigBase:
     def __new__(cls, path):
         if isinstance(path, str):
             path = pathlib.Path(path)
@@ -16,18 +25,43 @@ class Config:
         self = super().__new__(cls)
         # get the type of path and set from_type
         if path.suffix == '.yaml':
-            self.from_type = self._from_yaml
+            self._from_type = self._from_yaml
+        elif path.suffix == '.py':
+            self._from_type = self._from_python
         else:
             raise exc.UnsupportedConfigLangError(path.suffix)
 
-        self.path = path
+        self._path = path
         return self
+
+    def from_type(self, *names):
+        return self._from_type(*names)
+
+    def _from_python(self, *names):
+        # NOTE that a config written in python CANNOT
+        # be imported and should just be a literal dict
+        if not names:
+            raise TypeError('names is a required argument')
+
+        with open(self._path, 'rt') as f:
+            dict_literal = f.read()
+
+        current = ast.literal_eval(dict_literal)
+
+        for name in names:
+            current = current[name]
+
+        if fail and isinstance(current, dict):
+            raise ValueError(f'Your config path is incomplete.')
+
+        return current
+
 
     def _from_yaml(self, *names, fail=False):
         if not names:
             raise TypeError('names is a required argument')
 
-        with open(self.path, 'rt') as f:
+        with open(self._path, 'rt') as f:
             current = yaml.safe_load(f)
 
         for name in names:
@@ -39,21 +73,24 @@ class Config:
         return current
 
 
-class ConfigStatic(Config):  # FIXME this is more a schema?
-    """ A config file that lives in a repository and that changes
-    only when some change needs to be made to a decorator in the
-    code base that needs authenticated access.
+class AuthConfig(ConfigBase):  # FIXME this is more a schema?
+    """ Object representation of a static configuration file
+    that lives in a repository and that changes only when some
+    change needs to be made to a decorator in the code base that
+    needs authenticated access.
+    
+    This is the primary api entry point for orthauth.
     """
 
     def __new__(cls, path):
         self = super().__new__(cls, path)
-        self.dynamic_config = ConfigDynamic(self)
+        self.dynamic_config = UserConfig(self)
         return self
 
     def _pathit(self, path_string):
         path = pathlib.Path(path_string)
         if not path.is_absolute():
-            path = self.path.parent / path
+            path = self._path.parent / path
 
         # TODO expanduser
         return path
@@ -61,12 +98,22 @@ class ConfigStatic(Config):  # FIXME this is more a schema?
     @property
     def dynamic_config_path(self):
         search = [self._pathit(path_string) for path_string in
-                  self.from_type('dynamic-config-search-paths')]
+                  self.from_type('config-search-paths')]
         for path in search:
             if path.exists():
                 return path
 
         raise FileNotFoundError(f'{search}')
+
+    def from_type(self, *names):
+        blob = self._from_type(*names)
+        if blob is None:
+            blob = self.dynamic_config.from_type(*names)
+
+        if blob is None:
+            raise KeyError(f'{names}')
+
+        return blob
 
     def tangential_auth(self, inject_value, with_name, when=True):
         """ class decorator
@@ -76,7 +123,7 @@ class ConfigStatic(Config):  # FIXME this is more a schema?
             separate the logic of an API from the logic of its auth """
 
         def cdecorator(cls):
-            setattr(cls, inject_value, self(with_name))
+            setattr(cls, inject_value, self.get(with_name))
             return cls
 
         return cdecorator
@@ -87,76 +134,71 @@ class ConfigStatic(Config):  # FIXME this is more a schema?
 
     def _get(self, paths):
         secrets = self.secrets
-        current_error = None
         errors = []
         for names in paths:
-            auth_store = self.dynamic_config._path_source(*names)  # FIXME perf issue incoming
+            auth_store = self.dynamic_config.path_source(*names)  # FIXME perf issue incoming
             try:
                 return auth_store(*names)
             except KeyError as e:
-                logd.error(names)
                 errors.append(e)
-                #if current_error is not None:
-                    #try:
-                        #raise e from current_error
-                    #except BaseException as ne:
-                        #current_error = ne
-                #else:
-                    #current_error = e
-
+                logd.error(f'broken path {names}')
                 if auth_store != secrets:
                     try:
                         return secrets(*names)
                     except KeyError as e:
                         errors.append(e)
-                        #try:
-                            #raise e from current_error
-                        #except BaseException as ne:
-                            #current_error = ne
 
         if errors:
             raise KeyError(f'{[e.args[0] for e in errors]}') from errors[-1]
 
-        #if current_error is not None:
-            #raise current_error
+    def __call__(self, cls_or_function):
+        raise NotImplementedError
 
-    def __call__(self, with_name):
-        variable_config = self.from_type('insecure-static-variables', with_name)
+    def _check(self):
+        """ make sure restrictions on config structure are satisfied """
+        variables
 
-        # paths
+    def get(self, variable_name):
+        """ look up the value of a variable name from auth store or config """
+        variable_config = self.from_type('auth-variables', variable_name)
+        shading = []
+        shaded = []
+        # env
+        for evkey in ('environment-variables', 'env-vars'):
+            if evkey in variable_config:
+                ev = variable_config[evkey]
+                if isinstance(ev, str):
+                    shading += ev.split(' ')
+                else:
+                    if 'shading' in ev:
+                        shading += ev['shading'].split(' ')
+
+                    if 'shaded' in ev:
+                        shaded += ev['shaded'].split(' ')
+
         raw_paths = []
+        # paths
         if 'paths' in variable_config:
-            raw_paths = variable_config['paths']
-        if 'insecure-paths-to-secret' in variable_config:
-            raw_paths += list(branches(variable_config['insecure-paths-to-secret']))
+            raw_paths += variable_config['paths']
+
+        if 'paths-nested' in variable_config:
+            raw_paths += list(branches(variable_config['paths-nested']))
 
         dynamic_variables = self.dynamic_config.variables
-        paths = list(parse_and_expand_paths(raw_paths, dynamic_variables))
+        try:
+            paths = list(parse_and_expand_paths(raw_paths, dynamic_variables))
+        except exc.VariableNotDefinedError as e:
+            logd.error(f'variable missing in {self.dynamic_config_path}')
+            raise e  # TODO message about where missing from
 
-        # env
-        if 'environment-variables' in variable_config:
-            ev = variable_config['environment-variables']
-            if isinstance(ev, str):
-                shading = ev.split(' ')
-                shaded = []
-
-            if 'shading' in ev:
-                shading = ev['shading'].split(' ')
-
-            if 'shaded' in ev:
-                shaded = ev['shaded'].split(' ')
-
-            funsargs = (getenv, self._get, getenv), (shading, paths, shaded)
-        else:
-            funsargs = [self._get], [paths]
-
-        for f, v in zip(*funsargs):
-            SECRET = f(v)
-            if SECRET is not None:
-                return SECRET
+        for f, v in zip((getenv, self._get, getenv), (shading, paths, shaded)):
+            if v:
+                SECRET = f(v)
+                if SECRET is not None:
+                    return SECRET
 
 
-class ConfigDynamic(Config):
+class UserConfig(ConfigBase):
     """ Same structure as secrets, but all information
     is identifying, not authenticating
 
@@ -176,21 +218,14 @@ class ConfigDynamic(Config):
         return self
 
     def _auth_store(self, type_):
-        return {
-            'secrets': self._secrets,
-            'authinfo': self._authinfo,
-            'mypass': self._mypass,
-        }[type_]
-
-    def _blob_path(self, blob):
-        path = pathlib.Path(blob['path'])
-        if path.parts[0] == ('~'):
-            path = path.expanduser()
-
-        if not path.is_absolute():
-            path = self.path.parent / path
-
-        return path
+        try:
+            return {
+                'secrets': self._secrets,
+                'authinfo': self._authinfo,
+                'mypass': self._mypass,
+            }[type_]
+        except KeyError as e:
+            raise exc.UnknownAuthStoreType(type_)
 
     def _authinfo(self, blob):
         return Authinfo(self._blob_path(blob))
@@ -201,6 +236,17 @@ class ConfigDynamic(Config):
     def _mypass(self, blob):
         return Secrets(self._blob_path(blob))
 
+    def _blob_path(self, blob):
+        path = pathlib.Path(blob['path'])
+        if path.parts[0] == ('~'):
+            path = path.expanduser()
+
+        if not path.is_absolute():
+            path = self._path.parent / path
+
+        return path
+
+
     @property
     def secrets(self):
         """ default failover for paths without explicit management """
@@ -208,7 +254,7 @@ class ConfigDynamic(Config):
 
     @property
     def variables(self):
-        return self.from_type('insecure-dynamic-variables')
+        return self.from_type('variables')
 
     @property
     def _path_sources(self):
@@ -221,7 +267,7 @@ class ConfigDynamic(Config):
             try:
                 names = tuple(next(parse_and_expand_paths([raw_path], variables)))
             except exc.VariableNotDefinedError as e:
-                logd.error(f'variable missing in {self.path}')
+                logd.error(f'variable missing in {self._path}')
                 raise e  # TODO message about where missing from
 
             blob = store_data[type_]  # key error here is ok and expected but need good messaging
@@ -230,7 +276,7 @@ class ConfigDynamic(Config):
 
         return out
 
-    def _path_source(self, *names):
+    def path_source(self, *names):
         sources = self._path_sources
         search = names
         while search:

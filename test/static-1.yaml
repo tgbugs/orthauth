@@ -1,17 +1,27 @@
-dynamic-config-search-paths:
-  - dynamic-1.yaml  # for test
-  - ~/.config/program-name/config.yaml
+config-search-paths:  # search ends when the first path is found
+  - dynamic-1.yaml
+  - ~/.config/program-name/config.yaml  # FIXME os portability layer
   - /etc/program-name/config.{sxml,yaml,rkt,lisp}
-insecure-static-variables:
-  name-that-goes-in-code:
+default-paths:  # suggested locations for default paths when generating a blank user config
+  secrets: '{:user-config-path}/program-name/secrets.yaml'
+  config: '{:user-config-path}/program-name/config.yaml'
+auth-variables:  # insecure static variables
+  # a dynamic configs + auth store combination should always be able to return a value for each of these
+  env-example:
+    environment-variables: IMPLICITLY_SHADING_VARIABLES USER GROUP
+    shaded: ENV_VAR_SHADED_BY_PATHS
+  paths-example:  # path must be defined in the user config otherwise failure will ensue
+  full-complexity-example:
     environment-variables:
       shading: HIGHEST_PRIORITY HIGHER_PRIORITY_API_KEY {insecure-dynamic-env}
       shaded: LOW_PRIORITY_API_KEY LOWEST_PRIORITY_API_KEY
+      #dev: MY_PROD_VAR  # do dynamic options work here? no, because we don't know the checking logic
+      #test: MY_TEST_VAR
     paths:  # alternate syntax ? maybe ?
     - look here first
     - look here second
-    - look {variable} second
-    insecure-paths-to-secret:
+    - look {variable} third
+    paths-nested:  # insecure nested paths to secret
       secret:
         path:
           1:
@@ -25,17 +35,10 @@ insecure-static-variables:
               path:
       api:
         "{api-user-1}":  # tried first
-        "{api-user-2}":  # tried second
+        '{api-user-2}':  # tried second
   
-  other-name-that-goes-in-code:
+  paths-as-list-example:
     paths:
       - ['k1', 'k2']
       - ['k3', 'k4']
 
-  paths-example:
-    paths:
-      - yet another acceptable path
-      - this is also a valid path {yay}
-
-  env-example:
-    environment-variables: IMPLICITLY_SHADING_VARIABLES USER GROUP

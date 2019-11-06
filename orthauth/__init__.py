@@ -1,5 +1,5 @@
 from orthauth.core import (Secrets,
-                           ConfigStatic,
-                           ConfigDynamic,)
+                           AuthConfig,
+                           configure,)
 
 __version__ = '0.0.1.dev0'

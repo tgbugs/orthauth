@@ -15,7 +15,8 @@ __version__ = find_version('orthauth/__init__.py')
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
-tests_require = ['pytest', 'pytest-runner']
+yaml_requires = ['pyyaml']
+tests_require = ['pytest', 'pytest-runner'] + yaml_requires
 setup(name='orthauth',
       version=__version__,
       description='orthogonal authentication for python',
@@ -39,6 +40,7 @@ setup(name='orthauth',
       tests_require=tests_require,
       install_requires=[],
       extras_require={'test': tests_require,
+                      'yaml': yaml_requires,
                      },
       scripts=[],
       entry_points={'console_scripts': [ ],},
