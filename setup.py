@@ -19,7 +19,7 @@ yaml_requires = ['pyyaml']
 tests_require = ['pytest', 'pytest-runner'] + yaml_requires
 setup(name='orthauth',
       version=__version__,
-      description='orthogonal authentication for python',
+      description='A library to separate configuration and authentication from program logic',
       long_description=long_description,
       long_description_content_type='text/markdown',
       url='https://github.com/tgbugs/orthauth',
@@ -32,7 +32,8 @@ setup(name='orthauth',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
       ],
-      keywords=('python orthogonal authentication'),
+      keywords=('python orthogonal authentication '
+                'config configuration management'),
       packages=[
           'orthauth',
       ],
