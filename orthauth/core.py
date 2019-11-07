@@ -1,5 +1,6 @@
 import os
 import ast
+import sys
 import stat
 import pathlib
 import functools
@@ -39,7 +40,7 @@ class ConfigBase:
     def from_type(self, *names):
         return self._from_type(*names)
 
-    def _from_python(self, *names):
+    def _from_python(self, *names, fail=False):
         # NOTE that a config written in python CANNOT
         # be imported and should just be a literal dict
         if not names:
@@ -120,15 +121,41 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def __new__(cls, path):
         self = super().__new__(cls, path)
-        self.dynamic_config = UserConfig(self)
+        try:
+            self.dynamic_config = UserConfig(self)
+        except FileNotFoundError:
+            self.dynamic_config = None
         return self
 
+    @property
+    def _config_vars(self):
+        """ currently supported config vars
+
+            user-config-path
+        """
+        if os.name != 'nt':
+            if sys.platform == 'darwin':
+                ucp = '~/Library/Application Support'
+            else:
+                ucp = '~/.config'
+        else:
+            ucp = '~/AppData/Local'
+
+        return {'user-config-path': ucp,}
+
     def _pathit(self, path_string):
+        if '{:' in path_string:  # special paths  # FIXME vs startswith
+            path_string = path_string.replace('{:', '{')
+            path_string = path_string.format(**self._config_vars)
+
         path = pathlib.Path(path_string)
+
+        if path.parts[0] == ('~'):
+            path = path.expanduser()
+
         if not path.is_absolute():
             path = self._path.parent / path
 
-        # TODO expanduser
         return path
 
     @property
@@ -251,12 +278,8 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
         return cdecorator
 
-    @property
-    def secrets(self):
-        return self.dynamic_config.secrets
-
     def _get(self, paths):
-        secrets = self.secrets
+        secrets = self.dynamic_config.secrets
         errors = []
         for names in paths:
             auth_store = self.dynamic_config.path_source(*names)  # FIXME perf issue incoming
@@ -283,11 +306,15 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def get(self, variable_name):
         """ look up the value of a variable name from auth store or config """
-        try:
-            dvar_config = self.dynamic_config.from_type('auth-variables', variable_name)
-            f1 = False
-        except KeyError as e:
-            f1 = e
+        if self.dynamic_config is not None:  # FIXME sigh there must be a better way
+            try:
+                dvar_config = self.dynamic_config.from_type('auth-variables', variable_name)
+                f1 = False
+            except KeyError as e:
+                f1 = e
+                dvar_config = {}
+        else:
+            f1 = True
             dvar_config = {}
 
         try:

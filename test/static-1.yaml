@@ -1,6 +1,7 @@
 config-search-paths:  # search ends when the first path is found
   - dynamic-1.yaml
   - ~/.config/program-name/config.yaml  # FIXME os portability layer
+  - '{:user-config-path}/program-name/config.yaml'
   - /etc/program-name/config.{sxml,yaml,rkt,lisp}
 default-paths:  # suggested locations for default paths when generating a blank user config
   secrets: '{:user-config-path}/program-name/secrets.yaml'
