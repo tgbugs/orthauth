@@ -79,6 +79,63 @@ class TestDec(unittest.TestCase):
         test = Test()
         assert test.api_key == tv, [d for d in test.__dict__ if not d.startswith('__')]
 
+    def test_after_init(self):
+        @self.auth.tangential('api_key', 'test-after-init', atInit='after')
+        class Test:
+            def __init__(self):
+                self.api_key = 'YOU FELL FOR IT FOOL'
+
+        assert not hasattr(Test, 'api_key')
+        tv = 'after-init'
+        test = Test()
+        assert test.api_key == tv, [d for d in test.__dict__ if not d.startswith('__')]
+
+    def test_after_init_adt(self):
+        dec = self.auth.tangential('api_key', 'test-after-init')
+        @dec(atInit='after')
+        class Test:
+            def __init__(self):
+                self.api_key = 'YOU FELL FOR IT FOOL'
+
+        assert not hasattr(Test, 'api_key')
+        tv = 'after-init'
+        test = Test()
+        assert test.api_key == tv, [d for d in test.__dict__ if not d.startswith('__')]
+
+    def test_after_init_adt_should_fail(self):
+        dec = self.auth.tangential('api_key', 'test-after-init')
+        @dec(atInit=True)
+        class Test:
+            def __init__(self):
+                self.api_key = 'YOU FELL FOR IT FOOL'
+
+        assert not hasattr(Test, 'api_key')
+        tv = 'after-init'
+        test = Test()
+        assert test.api_key == tv, [d for d in test.__dict__ if not d.startswith('__')]
+
+    def test_after_init_adt_unset_fail(self):
+        dec = self.auth.tangential('api_key', 'test-after-init', atInit=True)
+        @dec(atInit=False)
+        class Test:
+            def __init__(self):
+                self.api_key = 'YOU FELL FOR IT FOOL'
+
+        tv = 'after-init'
+        test = Test()
+        assert test.api_key != tv, 'should have failed due to instance setting its own api_key'
+
+    def test_after_init_adt_unset(self):
+        dec = self.auth.tangential('api_key', 'test-after-init', atInit=True)
+        @dec(atInit=False)
+        class Test:
+            pass
+
+        tv = 'after-init'
+        assert Test.api_key == tv
+        test = Test()
+        assert test.api_key == tv, [d for d in test.__dict__ if not d.startswith('__')]
+
     def test_tangential_init(self):
         @self.auth.tangential_init('api_key', 'test-tang-init')
         class Test:
@@ -86,6 +143,17 @@ class TestDec(unittest.TestCase):
 
         assert not hasattr(Test, 'api_key')
         tv = 'tiapi'
+        test = Test()
+        assert test.api_key == tv, [d for d in test.__dict__ if not d.startswith('__')]
+
+    def test_tangential_init_after(self):
+        @self.auth.tangential_init('api_key', 'test-after-init', after=True)
+        class Test:
+            def __init__(self):
+                self.api_key = 'YOU FELL FOR IT FOOL'
+
+        assert not hasattr(Test, 'api_key')
+        tv = 'after-init'
         test = Test()
         assert test.api_key == tv, [d for d in test.__dict__ if not d.startswith('__')]
 

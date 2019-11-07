@@ -148,16 +148,35 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
         return blob
 
-    def tangential_init(self, inject_value, with_name, when=True):
+    def environ(self, set_envar, from_name, when=True):
+        """ in order to use orthauth with other projects that are not aware of
+            its existence and that make use of environment variables orthauth
+            can set the envar that the other project expects using a value from
+            an orthauth managed auth store """
+        raise NotImplementedError('TODO')
+
+    def tangential_init(self, inject_value, with_name, when=True, after=False):
         """ tangential decorator that defaults to atInit since it is a common use case """
-        return self.tangential(inject_value, with_name, when=when, atInit=True)
+        atInit = 'after' if after else True
+        return self.tangential(inject_value, with_name, when=when, atInit=atInit)
 
     def tangential(self, inject_value, with_name, when=True, asProperty=False, atInit=False):
         """ class decorator
             the tangential auth decorator makes a name available to
             all instances of a class from class creation time, this
             this is not fully orthogonal, but makes it easier to
-            separate the logic of an API from the logic of its auth """
+            separate the logic of an API from the logic of its auth
+
+            In some cases this can be used to overwrite an auth variable
+            in a class from a project that is unaware that orthauth exists.
+
+            atInit='after' -> bind the value after the original __init__
+            instead of before, useful in cases where the value is set
+            during __init__ """
+
+        if not when:
+            # FIXME not ready
+            return lambda cls: cls
 
         if asProperty and atInit:
             raise ValueError('asProperty and atInit are mutually exclusive')
@@ -178,29 +197,53 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
                     return inner_cdec
                 elif atInit:
-                    def inner_cdec(icls):
-                        cls__init__ = cls.__init__
-                        @functools.wraps(cls__init__)
-                        def init(inner_self, *args, **kwargs):
-                            setattr(inner_self, inject_value, self.get(with_name))
-                            cls__init__(inner_self, *args, **kwargs)
+                    if atInit == 'after':
+                        def inner_cdec(icls):
+                            cls__init__ = cls.__init__
+                            @functools.wraps(cls__init__)
+                            def init(inner_self, *args, **kwargs):
+                                cls__init__(inner_self, *args, **kwargs)
+                                setattr(inner_self, inject_value, self.get(with_name))
 
-                        setattr(icls, '__init__', init)
-                        return icls
+                            setattr(icls, '__init__', init)
+                            return icls
+                    else:  # life-without-macros
+                        def inner_cdec(icls):
+                            cls__init__ = cls.__init__
+                            @functools.wraps(cls__init__)
+                            def init(inner_self, *args, **kwargs):
+                                setattr(inner_self, inject_value, self.get(with_name))
+                                cls__init__(inner_self, *args, **kwargs)
+
+                            setattr(icls, '__init__', init)
+                            return icls
 
                     return inner_cdec
                 else:
-                    raise TypeError('HOW?!')
+                    def inner_cdec(icls):
+                        setattr(icls, inject_value, self.get(with_name))
+                        return icls
+
+                    return inner_cdec
+
             elif asProperty:
                 setattr(cls, inject_value, tangential_property)
+
             elif atInit:
                 cls__init__ = cls.__init__
-                @functools.wraps(cls__init__)
-                def init(inner_self, *args, **kwargs):
-                    setattr(inner_self, inject_value, self.get(with_name))
-                    cls__init__(inner_self, *args, **kwargs)
+                if atInit == 'after':
+                    @functools.wraps(cls__init__)
+                    def init(inner_self, *args, **kwargs):
+                        cls__init__(inner_self, *args, **kwargs)
+                        setattr(inner_self, inject_value, self.get(with_name))
+                else:
+                    @functools.wraps(cls__init__)
+                    def init(inner_self, *args, **kwargs):
+                        setattr(inner_self, inject_value, self.get(with_name))
+                        cls__init__(inner_self, *args, **kwargs)
 
                 setattr(cls, '__init__', init)
+
             else:
                 setattr(cls, inject_value, self.get(with_name))
 

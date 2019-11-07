@@ -54,5 +54,6 @@ auth-variables:
     path: api as-property
   test-at-init:
     path: api at-init
+  test-after-init: after-init
   test-tang-init: tiapi  # don't do this irl please
   test-value-2: a dynamic value
