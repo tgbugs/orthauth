@@ -109,23 +109,20 @@ class ConfigBase:
 
         return paths
 
+    def _pathit(self, path_string):
+        if '{:' in path_string:  # special paths  # FIXME vs startswith
+            path_string = path_string.replace('{:', '{')
+            path_string = path_string.format(**self._config_vars)
 
-class AuthConfig(ConfigBase):  # FIXME this is more a schema?
-    """ Object representation of a static configuration file
-    that lives in a repository and that changes only when some
-    change needs to be made to a decorator in the code base that
-    needs authenticated access.
-    
-    This is the primary api entry point for orthauth.
-    """
+        path = pathlib.Path(path_string)
 
-    def __new__(cls, path):
-        self = super().__new__(cls, path)
-        try:
-            self.dynamic_config = UserConfig(self)
-        except FileNotFoundError:
-            self.dynamic_config = None
-        return self
+        if path.parts[0] == ('~'):
+            path = path.expanduser()
+
+        if not path.is_absolute():
+            path = self._path.parent / path
+
+        return path
 
     @property
     def _config_vars(self):
@@ -143,20 +140,23 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
         return {'user-config-path': ucp,}
 
-    def _pathit(self, path_string):
-        if '{:' in path_string:  # special paths  # FIXME vs startswith
-            path_string = path_string.replace('{:', '{')
-            path_string = path_string.format(**self._config_vars)
 
-        path = pathlib.Path(path_string)
+class AuthConfig(ConfigBase):  # FIXME this is more a schema?
+    """ Object representation of a static configuration file
+    that lives in a repository and that changes only when some
+    change needs to be made to a decorator in the code base that
+    needs authenticated access.
 
-        if path.parts[0] == ('~'):
-            path = path.expanduser()
+    This is the primary api entry point for orthauth.
+    """
 
-        if not path.is_absolute():
-            path = self._path.parent / path
-
-        return path
+    def __new__(cls, path):
+        self = super().__new__(cls, path)
+        try:
+            self.dynamic_config = UserConfig(self)
+        except FileNotFoundError:
+            self.dynamic_config = None
+        return self
 
     @property
     def dynamic_config_path(self):
@@ -228,21 +228,21 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
                         def inner_cdec(icls):
                             cls__init__ = cls.__init__
                             @functools.wraps(cls__init__)
-                            def init(inner_self, *args, **kwargs):
+                            def __init__(inner_self, *args, **kwargs):
                                 cls__init__(inner_self, *args, **kwargs)
                                 setattr(inner_self, inject_value, self.get(with_name))
 
-                            setattr(icls, '__init__', init)
+                            setattr(icls, '__init__', __init__)
                             return icls
                     else:  # life-without-macros
                         def inner_cdec(icls):
                             cls__init__ = cls.__init__
                             @functools.wraps(cls__init__)
-                            def init(inner_self, *args, **kwargs):
+                            def __init__(inner_self, *args, **kwargs):
                                 setattr(inner_self, inject_value, self.get(with_name))
                                 cls__init__(inner_self, *args, **kwargs)
 
-                            setattr(icls, '__init__', init)
+                            setattr(icls, '__init__', __init__)
                             return icls
 
                     return inner_cdec
@@ -260,16 +260,16 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
                 cls__init__ = cls.__init__
                 if atInit == 'after':
                     @functools.wraps(cls__init__)
-                    def init(inner_self, *args, **kwargs):
+                    def __init__(inner_self, *args, **kwargs):
                         cls__init__(inner_self, *args, **kwargs)
                         setattr(inner_self, inject_value, self.get(with_name))
                 else:
                     @functools.wraps(cls__init__)
-                    def init(inner_self, *args, **kwargs):
+                    def __init__(inner_self, *args, **kwargs):
                         setattr(inner_self, inject_value, self.get(with_name))
                         cls__init__(inner_self, *args, **kwargs)
 
-                setattr(cls, '__init__', init)
+                setattr(cls, '__init__', __init__)
 
             else:
                 setattr(cls, inject_value, self.get(with_name))
@@ -302,6 +302,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def _check(self):
         """ make sure restrictions on config structure are satisfied """
+        # error on unexpected keys to prevent forgetting variables:
         raise NotImplementedError
 
     def get(self, variable_name):
@@ -393,14 +394,7 @@ class UserConfig(ConfigBase):
         return SshConfig(self._blob_path(blob))
 
     def _blob_path(self, blob):
-        path = pathlib.Path(blob['path'])
-        if path.parts[0] == ('~'):
-            path = path.expanduser()
-
-        if not path.is_absolute():
-            path = self._path.parent / path
-
-        return path
+        return self._pathit(blob['path'])
 
     @property
     def secrets(self):

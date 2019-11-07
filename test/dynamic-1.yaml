@@ -2,7 +2,7 @@ auth-stores:  # per dynamic config only 1 source per type
   # list in order of precedence ??
   secrets:
     path: secrets-test-1.yaml  # relative paths start from the location of the config in question
-    # path: ~/.config/orthauth/secrets.yaml  # default ...
+    # path: '{:user-config-path}/orthauth/secrets.yaml'  # default ...
   authinfo:
     path: ~/.authinfo
   mypass:
