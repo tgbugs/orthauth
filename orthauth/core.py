@@ -17,91 +17,86 @@ except ImportError as e:
     pass
 
 
-def configure(auth_config_path):
+def configure(auth_config_path, include=tuple()):
     """ oa.configure(__file__) """
-    return AuthConfig(auth_config_path)
+    return AuthConfig(auth_config_path, include=include)
 
 
 class ConfigBase:
-    def __new__(cls, path):
+    def __new__(cls, path, include=tuple()):
         if isinstance(path, str):
             path = pathlib.Path(path)
 
         self = super().__new__(cls)
-        # get the type of path and set from_type
-        if path.suffix == '.json':
-            self._from_type = self._from_json
-        elif path.suffix == '.py':
-            self._from_type = self._from_python
-        elif path.suffix == '.yaml':
-            self._from_type = self._from_yaml
-        else:
-            raise exc.UnsupportedConfigLangError(path.suffix)
+        try:
+            self._load_type = {'.json': self._load_json,
+                               '.py': self._load_python,
+                               '.yaml': self._load_yaml}[path.suffix]
+        except KeyError as e:
+            raise exc.UnsupportedConfigLangError(path.suffix) from e
 
         self._path = path
+
+        if include:  # unqualified include ... in theory we could nest everything
+            inc = []
+            avs = [self.get_blob('auth-variables')]
+            for ipath in include:
+                ic = cls(ipath)
+                inc.append(ic)
+                iav = ic.get_blob('auth-variables')
+                avs.append(iav)
+
+            bads = set()
+            for av in avs:
+                others = set(k for a in avs if a != av for k in a)
+                bads |= set(k for k in av if k in others) | set(k for k in others if k in av)
+
+            if bads:
+                raise exc.VariableCollisionError(f'{bads}')
+
+            self._included = tuple(inc)
+
+        else:
+            self._included = tuple()
+
         return self
 
-    def from_type(self, *names):
-        return self._from_type(*names)
+    def load_type(self):
+        return self._load_type()
 
-    def _from_string(self, string, format):
+    def get_blob(self, *names, fail=False):
+        if not names:
+            raise TypeError('names is a required argument')
+
+        current = self.load_type()
+
+        for name in names:
+            current = current[name]
+
+        if fail and isinstance(current, dict):
+            raise ValueError(f'Your config path is incomplete.')
+
+        return current
+
+    def _load_string(self, string, format):
         loadf = {'json': json.loads,
                  'py': ast.literal_eval,
                  'yaml': yaml.safe_load,}[format]
         return loadf(string)
 
-    def _from_json(self, *names, fail=False):
+    def _load_json(self):
+        with open(self._path, 'rt') as f:
+            return json.load(f)
+
+    def _load_python(self):
         # NOTE that a config written in python CANNOT
         # be imported and should just be a literal dict
-        if not names:
-            raise TypeError('names is a required argument')
-
         with open(self._path, 'rt') as f:
-            dict_literal = json.load(f)
+            return ast.literal_eval(f.read())
 
-        current = ast.literal_eval(dict_literal)
-
-        for name in names:
-            current = current[name]
-
-        if fail and isinstance(current, dict):
-            raise ValueError(f'Your config path is incomplete.')
-
-        return current
-
-    def _from_python(self, *names, fail=False):
-        # NOTE that a config written in python CANNOT
-        # be imported and should just be a literal dict
-        if not names:
-            raise TypeError('names is a required argument')
-
+    def _load_yaml(self):
         with open(self._path, 'rt') as f:
-            dict_literal = f.read()
-
-        current = ast.literal_eval(dict_literal)
-
-        for name in names:
-            current = current[name]
-
-        if fail and isinstance(current, dict):
-            raise ValueError(f'Your config path is incomplete.')
-
-        return current
-
-    def _from_yaml(self, *names, fail=False):
-        if not names:
-            raise TypeError('names is a required argument')
-
-        with open(self._path, 'rt') as f:
-            current = yaml.safe_load(f)
-
-        for name in names:
-            current = current[name]
-
-        if fail and isinstance(current, dict):
-            raise ValueError(f'Your config path is incomplete.')
-
-        return current
+            return yaml.safe_load(f)
 
     @staticmethod
     def _envars(var_config):
@@ -179,8 +174,8 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
     This is the primary api entry point for orthauth.
     """
 
-    def __new__(cls, path):
-        self = super().__new__(cls, path)
+    def __new__(cls, path, include=tuple()):
+        self = super().__new__(cls, path, include=include)
         try:
             self.dynamic_config = UserConfig(self)
         except FileNotFoundError:
@@ -190,7 +185,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
     @property
     def dynamic_config_paths(self):
         return [self._pathit(path_string) for path_string in
-                self.from_type('config-search-paths')]
+                self.get_blob('config-search-paths')]
 
     @property
     def dynamic_config_path(self):
@@ -200,12 +195,18 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
                 return path
 
         # if no config exists automatically create the default
-        dcp = dcps[0]
+        dcp = dcps[0]  # you MUST have a user config path
         self.write_user_config(dcp=dcp)
         return dcp
 
-    def from_type(self, *names):
-        blob = self._from_type(*names)
+    def load_type(self):
+        if not hasattr(self, '_blob'):
+            self._blob = super().load_type()
+
+        return self._blob
+
+    def get_blob(self, *names):
+        blob = super().get_blob(*names)
         if blob is None:
             raise KeyError(f'{names}')
 
@@ -343,7 +344,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def _make_dynamic(self):
         return {'auth-stores': {'secrets': {'path': '{:user-config-path}/orthauth/secrets.yaml'}},
-                'auth-variables': {var:None for var in self._from_type('auth-variables')}}
+                'auth-variables': {var:None for var in self.get_blob('auth-variables')}}
 
     def _serialize_user_config(self, format=None):
         config = self._make_dynamic()
@@ -385,7 +386,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         """ look up the value of a variable name from auth store or config """
         if self.dynamic_config is not None:  # FIXME sigh there must be a better way
             try:
-                dvar_config = self.dynamic_config.from_type('auth-variables', variable_name)
+                dvar_config = self.dynamic_config.get_blob('auth-variables', variable_name)
                 if dvar_config is None:
                     dvar_config = {}
                     f1 = True
@@ -399,7 +400,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
             dvar_config = {}
 
         try:
-            var_config = self.from_type('auth-variables', variable_name)
+            var_config = self.get_blob('auth-variables', variable_name)
             f2 = False
         except KeyError as e:
             f2 = e
@@ -482,17 +483,17 @@ class UserConfig(ConfigBase):
     @property
     def secrets(self):
         """ default failover for paths without explicit management """
-        return self._secrets(self.from_type('auth-stores', 'secrets'))
+        return self._secrets(self.get_blob('auth-stores', 'secrets'))
 
     @property
     def _path_sources(self):
         # FIXME from type reads twice, should only read once
         try:
-            path_data = self.from_type('path-sources')
+            path_data = self.get_blob('path-sources')
         except KeyError:
             return {}
 
-        store_data = self.from_type('auth-stores')
+        store_data = self.get_blob('auth-stores')
         out = {}
         for raw_path, type_ in path_data.items():
             try:

@@ -21,5 +21,10 @@ class UnsupportedConfigLangError(OrthauthError):
 class VariableNotDefinedError(OrthauthError):
     """ Variable is not know to any config file """
 
+
 class ConfigExistsError(OrthauthError):
     """ Config file already exists, so don't overwrite it """
+
+
+class VariableCollisionError(OrthauthError):
+    """ a variable is colliding between configs """

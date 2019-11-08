@@ -2,7 +2,6 @@ import os
 import unittest
 import orthauth as oa
 from .common import test_folder
-from pprint import pprint
 
 
 class TestSimple(unittest.TestCase):
@@ -48,11 +47,11 @@ class TestMakeUserConfig(unittest.TestCase):
 
     def test_make_dynamic(self):
         output = self.auth._make_dynamic()
-        assert output['auth-variables'].keys() == self.auth._from_type('auth-variables').keys(), 'hrm'
+        assert output['auth-variables'].keys() == self.auth.get_blob('auth-variables').keys(), 'hrm'
 
     def _roundtrip(self, format):
         ser = self.auth._serialize_user_config(format=format)
-        reloaded = self.auth._from_string(ser, format)
+        reloaded = self.auth._load_string(ser, format)
         test = self.auth._make_dynamic()
         assert reloaded == test, 'roundtrip failed for {format}'
 
@@ -64,3 +63,26 @@ class TestMakeUserConfig(unittest.TestCase):
 
     def test_serialize_yaml(self):
         self._roundtrip('yaml')
+
+class TestInclude(unittest.TestCase):
+    p1 = test_folder / 'static-1.yaml'
+    p2 = test_folder / 'static-2.json'
+    p3 = test_folder / 'static-3.py'
+    p4 = test_folder / 'static-4.py'
+
+    def test_include(self):
+        oa.configure(self.p1, include=(self.p2,))
+
+    def test_collision(self):
+        try:
+            oa.configure(self.p1, include=(self.p3,))
+            raise AssertionError('should have failed due to collision')
+        except oa.exceptions.VariableCollisionError:
+            pass
+
+    def test_collision_between_included(self):
+        try:
+            oa.configure(self.p1, include=(self.p2, self.p4))
+            raise AssertionError('should have failed due to collision')
+        except oa.exceptions.VariableCollisionError:
+            pass
