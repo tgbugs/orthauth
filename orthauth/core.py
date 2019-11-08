@@ -199,9 +199,10 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
             if path.exists():
                 return path
 
-        newline = '\n'
-        log.warning(f'No config files found! Checked:\n{f"{newline}".join([p.as_posix() for p in dcps])}')
-        return dcps[0]
+        # if no config exists automatically create the default
+        dcp = dcps[0]
+        self.write_user_config(dcp=dcp)
+        return dcp
 
     def from_type(self, *names):
         blob = self._from_type(*names)
@@ -342,8 +343,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def _make_dynamic(self):
         return {'auth-stores': {'secrets': {'path': '{:user-config-path}/orthauth/secrets.yaml'}},
-                'auth-variables': {var: {'environment-variables': None, 'path': None,}
-                                   for var in self._from_type('auth-variables')}}
+                'auth-variables': {var:None for var in self._from_type('auth-variables')}}
 
     def _serialize_user_config(self, format=None):
         config = self._make_dynamic()
@@ -356,23 +356,26 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         else:
             raise NotImplementedError(f'serialization to {format!r} is not ready')
 
-    def write_user_config(self, format=None):
+    def write_user_config(self, *, format=None, dcp=None):
         # NOTE user config cannot write itself
         dcps = self.dynamic_config_paths
         for _d in dcps:  # if any config already exists exit
             if _d.exists():
                 raise exc.ConfigExistsError('{_d}')
 
-        dcp = self.dynamic_config_path
+        if dcp is None:
+            dcp = self.dynamic_config_path
+
         if format is not None:
             dcp = dcp.with_suffix('.' + format)
             if dcp not in dcps:
                 # FIXME we do need to support .* or {yaml,py,lisp,json}
                 raise TypeError(f'{dcp} not one of the expected formats {dcps}')
+        else:
+            format = dcp.suffix.strip('.')
 
         with open(dcp, 'wt') as f:
             f.write(self._serialize_user_config(format=format))
-
 
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
@@ -383,7 +386,11 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         if self.dynamic_config is not None:  # FIXME sigh there must be a better way
             try:
                 dvar_config = self.dynamic_config.from_type('auth-variables', variable_name)
-                f1 = False
+                if dvar_config is None:
+                    dvar_config = {}
+                    f1 = True
+                else:
+                    f1 = False
             except (KeyError, FileNotFoundError) as e:
                 f1 = e
                 dvar_config = {}
@@ -417,7 +424,10 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         paths = self._paths(dvar_config)
         paths += self._paths(var_config)
 
-        for f, v in zip((getenv, self._get, lambda d: (str(d[0]) if d else None)), (envars, paths, defaults)):
+        for f, v in zip((getenv,
+                         self._get,
+                         lambda d: (str(d[0]) if d else None)),
+                        (envars, paths, defaults)):
             if v:
                 SECRET = f(v)
                 if SECRET is not None:

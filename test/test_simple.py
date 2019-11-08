@@ -39,6 +39,13 @@ class TestMakeUserConfig(unittest.TestCase):
         sc = test_folder / 'static-1.yaml'
         self.auth = oa.AuthConfig(sc)
 
+    def test_exists(self):
+        try:
+            self.auth.write_user_config()
+            raise AssertionError('should not have written')
+        except oa.exceptions.ConfigExistsError:
+            pass
+
     def test_make_dynamic(self):
         output = self.auth._make_dynamic()
         assert output['auth-variables'].keys() == self.auth._from_type('auth-variables').keys(), 'hrm'
