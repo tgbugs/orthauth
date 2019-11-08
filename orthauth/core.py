@@ -1,9 +1,11 @@
 import os
 import ast
 import sys
+import json
 import stat
 import pathlib
 import functools
+from pprint import pformat
 from . import exceptions as exc
 from .utils import branches, getenv, parse_paths
 from .utils import log, logd
@@ -27,10 +29,12 @@ class ConfigBase:
 
         self = super().__new__(cls)
         # get the type of path and set from_type
-        if path.suffix == '.yaml':
-            self._from_type = self._from_yaml
+        if path.suffix == '.json':
+            self._from_type = self._from_json
         elif path.suffix == '.py':
             self._from_type = self._from_python
+        elif path.suffix == '.yaml':
+            self._from_type = self._from_yaml
         else:
             raise exc.UnsupportedConfigLangError(path.suffix)
 
@@ -39,6 +43,31 @@ class ConfigBase:
 
     def from_type(self, *names):
         return self._from_type(*names)
+
+    def _from_string(self, string, format):
+        loadf = {'json': json.loads,
+                 'py': ast.literal_eval,
+                 'yaml': yaml.safe_load,}[format]
+        return loadf(string)
+
+    def _from_json(self, *names, fail=False):
+        # NOTE that a config written in python CANNOT
+        # be imported and should just be a literal dict
+        if not names:
+            raise TypeError('names is a required argument')
+
+        with open(self._path, 'rt') as f:
+            dict_literal = json.load(f)
+
+        current = ast.literal_eval(dict_literal)
+
+        for name in names:
+            current = current[name]
+
+        if fail and isinstance(current, dict):
+            raise ValueError(f'Your config path is incomplete.')
+
+        return current
 
     def _from_python(self, *names, fail=False):
         # NOTE that a config written in python CANNOT
@@ -159,14 +188,20 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         return self
 
     @property
+    def dynamic_config_paths(self):
+        return [self._pathit(path_string) for path_string in
+                self.from_type('config-search-paths')]
+
+    @property
     def dynamic_config_path(self):
-        search = [self._pathit(path_string) for path_string in
-                  self.from_type('config-search-paths')]
-        for path in search:
+        dcps = self.dynamic_config_paths
+        for path in dcps:
             if path.exists():
                 return path
 
-        raise FileNotFoundError(f'{search}')
+        newline = '\n'
+        log.warning(f'No config files found! Checked:\n{f"{newline}".join([p.as_posix() for p in dcps])}')
+        return dcps[0]
 
     def from_type(self, *names):
         blob = self._from_type(*names)
@@ -305,6 +340,40 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         # error on unexpected keys to prevent forgetting variables:
         raise NotImplementedError
 
+    def _make_dynamic(self):
+        return {'auth-stores': {'secrets': {'path': '{:user-config-path}/orthauth/secrets.yaml'}},
+                'auth-variables': {var: {'environment-variables': None, 'path': None,}
+                                   for var in self._from_type('auth-variables')}}
+
+    def _serialize_user_config(self, format=None):
+        config = self._make_dynamic()
+        if format == 'json':
+            return json.dumps(config, indent=2, sort_keys=True)
+        elif format == 'py':
+            return pformat(config)
+        elif format == 'yaml':
+            return yaml.dump(config, default_flow_style=False)
+        else:
+            raise NotImplementedError(f'serialization to {format!r} is not ready')
+
+    def write_user_config(self, format=None):
+        # NOTE user config cannot write itself
+        dcps = self.dynamic_config_paths
+        for _d in dcps:  # if any config already exists exit
+            if _d.exists():
+                raise exc.ConfigExistsError('{_d}')
+
+        dcp = self.dynamic_config_path
+        if format is not None:
+            dcp = dcp.with_suffix('.' + format)
+            if dcp not in dcps:
+                # FIXME we do need to support .* or {yaml,py,lisp,json}
+                raise TypeError(f'{dcp} not one of the expected formats {dcps}')
+
+        with open(dcp, 'wt') as f:
+            f.write(self._serialize_user_config(format=format))
+
+
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
         return self._pathit(self.get(variable_name))
@@ -315,7 +384,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
             try:
                 dvar_config = self.dynamic_config.from_type('auth-variables', variable_name)
                 f1 = False
-            except KeyError as e:
+            except (KeyError, FileNotFoundError) as e:
                 f1 = e
                 dvar_config = {}
         else:

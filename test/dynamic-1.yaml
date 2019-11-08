@@ -46,6 +46,15 @@ auth-variables:
         some-user:
         some-other-user:
   
+  # use case, there are a bunch of names that will be defined in a user config
+  # and the user will pass one of them to look up a secret
+  # e.g. I have 100 google sheet names that are going to be defined directly
+  # in the code and the config doesn't know anything about them ...
+  # maybe that is a mistake ? maybe we can do `name = auth.register('SheetName')`
+  # and the user can add their own entries ? I don't entirely like that ...
+  heading-example:  # this one is going to take a little more thinking
+    dynamic-variables: sheet-name
+
   paths-as-list-example:
     paths:
       - ['k1', 'k2']
