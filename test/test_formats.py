@@ -1,3 +1,4 @@
+import json
 import yaml
 import pprint
 import unittest
@@ -25,7 +26,21 @@ class TestFormats(unittest.TestCase):
                 d = yaml.safe_load(f)
                 o.write(pprint.pformat(d))
 
-            config = self._config('static-1.yaml')
+            config = self._config(path.name)
+            self._do_test(config)
+
+        finally:
+            if path.exists():
+                path.unlink()
+
+    def test_json(self):
+        path = test_folder / 'static-1.json'
+        try:
+            with open(test_folder / 'static-1.yaml', 'rt') as f, open(path, 'wt') as o:
+                d = yaml.safe_load(f)
+                json.dump(d, o)
+
+            config = self._config(path.name)
             self._do_test(config)
 
         finally:

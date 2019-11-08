@@ -1,7 +1,24 @@
 import os
 import unittest
+import yaml
 import orthauth as oa
 from .common import test_folder
+
+
+class TestConfigure(unittest.TestCase):
+    def setUp(self):
+        with open(test_folder / 'static-1.yaml', 'rt') as f:
+            self.tv = yaml.safe_load(f)
+
+    def test_configure(self):
+        auth = oa.configure(test_folder / 'static-1.yaml')
+        test = auth.load_type()
+        assert test == self.tv
+
+    def test_configure_relative(self):
+        auth = oa.configure_relative(__file__, 'static-1.yaml')
+        test = auth.load_type()
+        assert test == self.tv
 
 
 class TestSimple(unittest.TestCase):
@@ -13,7 +30,7 @@ class TestSimple(unittest.TestCase):
         print(self.auth)
         assert self.auth.dynamic_config._path == self.auth.dynamic_config_path, 'big oops'
 
-    def test_load(self):
+    def test_tangential(self):
         @self.auth.tangential('api_key', 'full-complexity-example')
         class Test:
             pass

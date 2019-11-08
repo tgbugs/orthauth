@@ -18,11 +18,20 @@ except ImportError as e:
 
 
 def configure(auth_config_path, include=tuple()):
-    """ oa.configure(__file__) """
+    """ hrm """
     return AuthConfig(auth_config_path, include=include)
 
 
+def configure_relative(calling__file__, name, include=tuple()):
+    """ hrm """
+    return AuthConfig._from_relative_path(calling__file__, name, include=include)
+
+
 class ConfigBase:
+    @classmethod
+    def _from_relative_path(cls, calling__file__, name, include=tuple()):
+        return cls(pathlib.Path(calling__file__).parent / name, include=include)
+
     def __new__(cls, path, include=tuple()):
         if isinstance(path, str):
             path = pathlib.Path(path)
@@ -38,10 +47,17 @@ class ConfigBase:
         self._path = path
 
         if include:  # unqualified include ... in theory we could nest everything
+            if isinstance(include, cls):
+                include = include,
+
             inc = []
             avs = [self.get_blob('auth-variables')]
             for ipath in include:
-                ic = cls(ipath)
+                if isinstance(ipath, cls):
+                    ic = ipath
+                else:
+                    ic = cls(ipath)
+
                 inc.append(ic)
                 iav = ic.get_blob('auth-variables')
                 avs.append(iav)
