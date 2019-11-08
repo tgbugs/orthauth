@@ -305,6 +305,10 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         # error on unexpected keys to prevent forgetting variables:
         raise NotImplementedError
 
+    def get_path(self, variable_name):
+        """ if you know a variable holds a path use this to autoconvert """
+        return self._pathit(self.get(variable_name))
+
     def get(self, variable_name):
         """ look up the value of a variable name from auth store or config """
         if self.dynamic_config is not None:  # FIXME sigh there must be a better way
