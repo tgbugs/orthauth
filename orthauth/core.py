@@ -3,6 +3,7 @@ import ast
 import sys
 import json
 import stat
+import inspect
 import pathlib
 import functools
 from pprint import pformat
@@ -22,8 +23,10 @@ def configure(auth_config_path, include=tuple()):
     return AuthConfig(auth_config_path, include=include)
 
 
-def configure_relative(calling__file__, name, include=tuple()):
+def configure_relative(name, include=tuple()):
     """ hrm """
+    stack = inspect.stack(0)
+    calling__file__ = stack[1].filename
     return AuthConfig._from_relative_path(calling__file__, name, include=include)
 
 
@@ -398,6 +401,9 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         else:
             format = dcp.suffix.strip('.')
 
+        if not dcp.parent.exists():
+            dcp.parent.mkdir(parents=True)
+
         with open(dcp, 'wt') as f:
             f.write(self._serialize_user_config(format))
 
@@ -416,7 +422,8 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
                 except KeyError as e:
                     error = e
             else:
-                raise error
+                if error is not None:
+                    raise error
 
         try:
             dvar_config = self.dynamic_config.get_blob('auth-variables', variable_name)

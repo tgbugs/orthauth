@@ -1,3 +1,4 @@
+import shutil
 import unittest
 import orthauth as oa
 from .common import test_folder
@@ -12,7 +13,11 @@ class TestInclude(unittest.TestCase):
     def tearDown(self):
         for p in (self.p2, self.p3, self.p4):
             a = oa.configure(p)
-            a.dynamic_config._path.unlink()
+            dcp = a.dynamic_config._path
+            if dcp.parent != p.parent:
+                shutil.rmtree(p.parent / dcp.relative_to(p.parent).parts[0])
+            else:
+                dcp.unlink()
 
     def test_include(self):
         oa.configure(self.p1, include=(self.p2,))

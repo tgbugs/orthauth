@@ -16,7 +16,7 @@ class TestConfigure(unittest.TestCase):
         assert test == self.tv
 
     def test_configure_relative(self):
-        auth = oa.configure_relative(__file__, 'static-1.yaml')
+        auth = oa.configure_relative('static-1.yaml')
         test = auth.load_type()
         assert test == self.tv
 

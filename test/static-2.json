@@ -1,4 +1,4 @@
-{"config-search-paths": ["dynamic-2.json"],
+{"config-search-paths": ["check/this/out/kids/dynamic-2.json"],
  "auth-variables": {"non-colliding-key": "OK",
                     "collides-with-other": "DARN",
                     "static-2-test-value": "ok"}}
