@@ -63,26 +63,3 @@ class TestMakeUserConfig(unittest.TestCase):
 
     def test_serialize_yaml(self):
         self._roundtrip('yaml')
-
-class TestInclude(unittest.TestCase):
-    p1 = test_folder / 'static-1.yaml'
-    p2 = test_folder / 'static-2.json'
-    p3 = test_folder / 'static-3.py'
-    p4 = test_folder / 'static-4.py'
-
-    def test_include(self):
-        oa.configure(self.p1, include=(self.p2,))
-
-    def test_collision(self):
-        try:
-            oa.configure(self.p1, include=(self.p3,))
-            raise AssertionError('should have failed due to collision')
-        except oa.exceptions.VariableCollisionError:
-            pass
-
-    def test_collision_between_included(self):
-        try:
-            oa.configure(self.p1, include=(self.p2, self.p4))
-            raise AssertionError('should have failed due to collision')
-        except oa.exceptions.VariableCollisionError:
-            pass

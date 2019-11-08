@@ -54,15 +54,32 @@ class ConfigBase:
             if bads:
                 raise exc.VariableCollisionError(f'{bads}')
 
-            self._included = tuple(inc)
+            self._include = tuple(inc)
 
         else:
-            self._included = tuple()
+            self._include = tuple()
 
         return self
 
     def load_type(self):
         return self._load_type()
+
+    def dump(self, config):
+        """ Don't use this ... seriously """
+        format = self._path.suffix.strip('.')
+        string = self._dump(config, format)
+        with open(self._path, 'wt') as f:
+            f.write(string)
+
+    def _dump(self, config, format):
+        if format == 'json':
+            return json.dumps(config, indent=2, sort_keys=True)
+        elif format == 'py':
+            return pformat(config)
+        elif format == 'yaml':
+            return yaml.dump(config, default_flow_style=False)
+        else:
+            raise NotImplementedError(f'serialization to {format!r} is not ready')
 
     def get_blob(self, *names, fail=False):
         if not names:
@@ -176,10 +193,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def __new__(cls, path, include=tuple()):
         self = super().__new__(cls, path, include=include)
-        try:
-            self.dynamic_config = UserConfig(self)
-        except FileNotFoundError:
-            self.dynamic_config = None
+        self.dynamic_config = UserConfig(self)
         return self
 
     @property
@@ -346,16 +360,9 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         return {'auth-stores': {'secrets': {'path': '{:user-config-path}/orthauth/secrets.yaml'}},
                 'auth-variables': {var:None for var in self.get_blob('auth-variables')}}
 
-    def _serialize_user_config(self, format=None):
+    def _serialize_user_config(self, format):
         config = self._make_dynamic()
-        if format == 'json':
-            return json.dumps(config, indent=2, sort_keys=True)
-        elif format == 'py':
-            return pformat(config)
-        elif format == 'yaml':
-            return yaml.dump(config, default_flow_style=False)
-        else:
-            raise NotImplementedError(f'serialization to {format!r} is not ready')
+        return self._dump(config, format)
 
     def write_user_config(self, *, format=None, dcp=None):
         # NOTE user config cannot write itself
@@ -376,7 +383,7 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
             format = dcp.suffix.strip('.')
 
         with open(dcp, 'wt') as f:
-            f.write(self._serialize_user_config(format=format))
+            f.write(self._serialize_user_config(format))
 
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
@@ -384,27 +391,34 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def get(self, variable_name):
         """ look up the value of a variable name from auth store or config """
-        if self.dynamic_config is not None:  # FIXME sigh there must be a better way
-            try:
-                dvar_config = self.dynamic_config.get_blob('auth-variables', variable_name)
-                if dvar_config is None:
-                    dvar_config = {}
-                    f1 = True
-                else:
-                    f1 = False
-            except (KeyError, FileNotFoundError) as e:
-                f1 = e
-                dvar_config = {}
-        else:
-            f1 = True
-            dvar_config = {}
+        av = self.get_blob('auth-variables')
+        if variable_name not in av:
+            error = None
+            for i in self._include:
+                try:
+                    return i.get(variable_name)
+                except KeyError as e:
+                    error = e
+            else:
+                raise error
 
         try:
-            var_config = self.get_blob('auth-variables', variable_name)
+            dvar_config = self.dynamic_config.get_blob('auth-variables', variable_name)
+            if dvar_config is None:
+                dvar_config = {}
+                f1 = True
+            else:
+                f1 = False
+        except KeyError as e:
+            dvar_config = {}
+            f1 = e
+
+        try:
+            var_config = av[variable_name]
             f2 = False
         except KeyError as e:
-            f2 = e
             var_config = {}
+            f2 = e
 
         if f1 and f2:
             raise f2 from f1
