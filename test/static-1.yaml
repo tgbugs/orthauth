@@ -19,6 +19,13 @@ auth-variables:  # insecure static variables
     path: suggest path
   paths-as-list-example:
     path: ['k1', 'k2']
+  test-multi-path-1: [
+    'path/does/not/exist/file.ext',
+    'static-1.yaml']
+  test-multi-path-2: [
+    'path/does/not/exist/file.ext',
+    'static-1.yaml']
+  test-multi-path-3:
   test-as-property:
   test-at-init:
   test-after-init:

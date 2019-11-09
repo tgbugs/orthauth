@@ -49,6 +49,15 @@ class TestSimple(unittest.TestCase):
     def test_default(self):
         assert self.auth.get('default-example') == '42'
 
+    def test_multi_path_1(self):
+        assert self.auth.get_path('test-multi-path-1') == self.auth._path
+
+    def test_multi_path_2(self):
+        assert self.auth.get_path('test-multi-path-2') == self.auth.dynamic_config._path
+
+    def test_multi_path_3(self):
+        assert self.auth.get_path('test-multi-path-3') == self.auth.dynamic_config._path
+
 
 class TestMakeUserConfig(unittest.TestCase):
     def setUp(self):

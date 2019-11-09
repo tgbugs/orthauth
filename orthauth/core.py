@@ -409,9 +409,29 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
-        return self._pathit(self.get(variable_name))
+        var = self.get(variable_name, for_path=True)
+        log.debug(type(var))
+        log.debug(var)
+        if isinstance(var, list):
+            if not var:
+                return
 
-    def get(self, variable_name):
+            first = None
+            for v in var:
+                p = self._pathit(v)
+                print(p)
+                if first is None:
+                    first = p
+
+                if p.exists():
+                    return p
+            else:
+                return first
+
+        else:
+            return self._pathit(var)
+
+    def get(self, variable_name, *args, **kwargs):
         """ look up the value of a variable name from auth store or config """
         av = self.get_blob('auth-variables')
         if variable_name not in av:
@@ -448,23 +468,48 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
         defaults = []
         if not isinstance(dvar_config, dict):
-            defaults.append(dvar_config)
+            if isinstance(dvar_config, list):
+                if ('for_path' not in kwargs or not kwargs['for_path']):
+                    log.warning(f'attempting to get a default value for {variable_name} '
+                                'that is a list did you want get_path?')
+
+                defaults.extend(dvar_config)
+            else:
+                defaults.append(dvar_config)
+
             dvar_config = {}
 
         if not isinstance(var_config, dict):
-            defaults.append(var_config)
+            if isinstance(var_config, list):
+                if ('for_path' not in kwargs or not kwargs['for_path']):
+                    log.warning(f'attempting to get a default value for {variable_name} '
+                                'that is a list did you want get_path?')
+
+                defaults.extend(var_config)
+            else:
+                defaults.append(var_config)
+
             var_config = {}
         elif 'default' in var_config:
-            defaults.append(var_config['default'])
+            d = var_config['default']
+            if isinstance(d, list):
+                defaults.extend(d)
+            else:
+                defaults.append(d)
 
         envars = self._envars(dvar_config)
         envars += self._envars(var_config)
         paths = self._paths(dvar_config)
         paths += self._paths(var_config)
 
-        for f, v in zip((getenv,
-                         self._get,
-                         lambda d: (str(d[0]) if d else None)),
+        if 'for_path' in kwargs and kwargs['for_path']:
+            def get_default(d):
+                return d
+        else:
+            def get_default(d):
+                return str(d[0])
+
+        for f, v in zip((getenv, self._get, get_default),
                         (envars, paths, defaults)):
             if v:
                 SECRET = f(v)

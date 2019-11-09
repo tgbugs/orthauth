@@ -66,3 +66,9 @@ auth-variables:
   test-after-init: after-init
   test-tang-init: tiapi  # don't do this irl please
   test-value-2: a dynamic value
+  test-multi-path-2: [
+    'also/does/not/exist.path',
+    'dynamic-1.yaml']
+  test-multi-path-3: [
+    'path/does/not/exist/file.ext',
+    'dynamic-1.yaml']
