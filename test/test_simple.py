@@ -5,6 +5,14 @@ import orthauth as oa
 from .common import test_folder
 
 
+class TestAuthConfig(unittest.TestCase):
+    def test_auth_config_in_binary_blob(self):
+        auth = oa.configure_relative('auth-config.py')
+        blob = auth.load_type()
+        assert blob == {'config-search-paths': ['../test/dynamic-1.yaml'],
+                        'auth-variables': {'hrm': 'derp'}}
+
+
 class TestConfigure(unittest.TestCase):
     def setUp(self):
         with open(test_folder / 'static-1.yaml', 'rt') as f:

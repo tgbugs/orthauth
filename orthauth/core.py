@@ -6,6 +6,7 @@ import stat
 import inspect
 import pathlib
 import functools
+import importlib
 from pprint import pformat
 from . import exceptions as exc
 from .utils import branches, getenv, parse_paths
@@ -26,14 +27,19 @@ def configure(auth_config_path, include=tuple()):
 def configure_relative(name, include=tuple()):
     """ hrm """
     stack = inspect.stack(0)
-    calling__file__ = stack[1].filename
-    return AuthConfig._from_relative_path(calling__file__, name, include=include)
+    s1 = stack[1]
+    calling__file__ = s1.filename
+    calling_module = inspect.getmodule(s1.frame)
+    log.warning(calling_module)
+    log.warning(calling_module.__name__)
+    log.warning(calling_module.__file__)
+    return AuthConfig._from_relative_path(calling__file__,
+                                          name,
+                                          include=include,
+                                          calling_module=calling_module)
 
 
 class ConfigBase:
-    @classmethod
-    def _from_relative_path(cls, calling__file__, name, include=tuple()):
-        return cls(pathlib.Path(calling__file__).parent / name, include=include)
 
     def __new__(cls, path, include=tuple()):
         if isinstance(path, str):
@@ -125,8 +131,21 @@ class ConfigBase:
             return json.load(f)
 
     def _load_python(self):
-        # NOTE that a config written in python CANNOT
-        # be imported and should just be a literal dict
+        """ python configuraiton files should be only a single dict literal """
+        if (hasattr(self, '_calling_module') and
+            self._path.suffix == '.py' and
+            not self._path.exists()):
+            # there are certain ways of installing a python package that
+            # stick an auth-config.py file in a binary blob so we need to
+            # do this little dance to guess the right module name and
+            # import it including files with dashes in their name
+            p = pathlib.Path(self._calling_module.__file__).parent
+            prt = self._path.relative_to(p)
+            modpath = '.'.join([p.name, *prt.with_suffix('').as_posix().split('/')])
+            module = importlib.import_module(modpath)
+            source = inspect.getsource(module)
+            return ast.literal_eval(source)
+
         with open(self._path, 'rt') as f:
             return ast.literal_eval(f.read())
 
@@ -209,6 +228,13 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
     This is the primary api entry point for orthauth.
     """
+
+    @classmethod
+    def _from_relative_path(cls, calling__file__, name, include=tuple(), calling_module=None):
+        self = super().__new__(cls, pathlib.Path(calling__file__).parent / name, include=include)
+        self._calling_module = calling_module
+        self.dynamic_config = UserConfig(self)
+        return self
 
     def __new__(cls, path, include=tuple()):
         self = super().__new__(cls, path, include=include)
