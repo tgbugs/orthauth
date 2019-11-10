@@ -30,9 +30,6 @@ def configure_relative(name, include=tuple()):
     s1 = stack[1]
     calling__file__ = s1.filename
     calling_module = inspect.getmodule(s1.frame)
-    log.warning(calling_module)
-    log.warning(calling_module.__name__)
-    log.warning(calling_module.__file__)
     return AuthConfig._from_relative_path(calling__file__,
                                           name,
                                           include=include,
