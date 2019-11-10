@@ -448,7 +448,6 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
             first = None
             for v in var:
                 p = self._pathit(v)
-                print(p)
                 if first is None:
                     first = p
 
