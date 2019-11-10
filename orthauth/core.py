@@ -151,7 +151,13 @@ class ConfigBase:
 
     def _load_yaml(self):
         with open(self._path, 'rt') as f:
-            return yaml.safe_load(f)
+            try:
+                return yaml.safe_load(f)
+            except NameError as e:
+                msg = (f'Module yaml was not found while tyring to load {self._path}\n'
+                       'To resolve this issue reinstall orthauth with yaml '
+                       'support enabled\n or reform your config to .py')
+                raise ModuleNotFoundError(msg) from e
 
     @staticmethod
     def _envars(var_config):
