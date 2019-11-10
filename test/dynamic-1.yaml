@@ -17,6 +17,8 @@ path-sources:  # on failure to match only secrets is searched
   magithub other: secrets
   hrm does this: secrets
 auth-variables:
+  test-config-vars: [
+    '{:prefix}/share/orthauth/.does-not-exist']
   env-example:
     environment-variables: I_PREFER_MY_OWN_ENV_VARS_THANK_YOU_VERY_MUCH
   paths-example:  # path must be defined in the user config otherwise failure will ensue

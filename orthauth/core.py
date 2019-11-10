@@ -210,17 +210,37 @@ class ConfigBase:
     def _config_vars(self):
         """ currently supported config vars
 
+            cwd
+            prefix
+            user-cache-path
             user-config-path
+            user-data-path
+            user-log-path
         """
         if os.name != 'nt':
             if sys.platform == 'darwin':
                 ucp = '~/Library/Application Support'
+                udp = '~/Library/Application Support'
+                uchp = '~/Library/Caches'
+                ulp = '~/Library/Logs'
             else:
                 ucp = '~/.config'
+                udp = '~/.local/share'
+                uchp = '~/.cache'
+                ulp = '~/.cache/log'
         else:
             ucp = '~/AppData/Local'
+            udp = ucp
+            uchp = ucp
+            ulp = '~/AppData/Local/Logs'
 
-        return {'user-config-path': ucp,}
+        return {'cwd': pathlib.Path.cwd(),
+                'prefix': sys.prefix,
+                'user-cache-path': uchp,
+                'user-config-path': ucp,
+                'user-data-path': udp,
+                'user-log-path': ulp,
+        }
 
 
 class AuthConfig(ConfigBase):  # FIXME this is more a schema?
@@ -439,8 +459,6 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
         var = self.get(variable_name, for_path=True)
-        log.debug(type(var))
-        log.debug(var)
         if isinstance(var, list):
             if not var:
                 return
@@ -458,6 +476,37 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
 
         else:
             return self._pathit(var)
+
+    def get_default(self, variable_name, *args, **kwargs):
+        av = self.get_blob('auth-variables')
+        var_config = av[variable_name]
+
+        defaults = []
+        if not isinstance(var_config, dict):
+            if isinstance(var_config, list):
+                if ('for_path' not in kwargs or not kwargs['for_path']):
+                    log.warning(f'attempting to get a default value for {variable_name} '
+                                'that is a list did you want get_path?')
+
+                defaults.extend(var_config)
+            else:
+                defaults.append(var_config)
+
+            var_config = {}
+        elif 'default' in var_config:
+            d = var_config['default']
+            if isinstance(d, list):
+                defaults.extend(d)
+            else:
+                defaults.append(d)
+
+        if defaults:
+            return defaults[0]
+
+    def get_path_default(self, variable_name):
+        d = self.get_default(variable_name, for_path=True)
+        if d is not None:
+            return self._pathit(d)
 
     def get(self, variable_name, *args, **kwargs):
         """ look up the value of a variable name from auth store or config """

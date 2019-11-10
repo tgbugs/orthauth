@@ -1,4 +1,6 @@
 import os
+import sys
+import pathlib
 import unittest
 import yaml
 import orthauth as oa
@@ -33,6 +35,19 @@ class TestSimple(unittest.TestCase):
     def setUp(self):
         sc = test_folder / 'static-1.yaml'
         self.auth = oa.AuthConfig(sc)
+
+    def test_config_vars(self):
+        hrm = self.auth.get('test-config-vars')
+        path = self.auth.get_path('test-config-vars')
+        oa.utils.log.debug(hrm)
+        assert path.as_posix() == sys.prefix + hrm.split('}', 1)[-1]
+
+    def test_get_default(self):
+        hrm = self.auth.get_default('test-config-vars')
+        path = self.auth.get_path_default('test-config-vars')
+        oa.utils.log.debug(hrm)
+        tv = pathlib.Path.cwd().as_posix() + hrm.split('}', 1)[-1]
+        assert path.as_posix() == tv
 
     def test_dynamic(self):
         print(self.auth)

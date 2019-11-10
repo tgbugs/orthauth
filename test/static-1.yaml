@@ -7,6 +7,13 @@ default-paths:  # suggested locations for default paths when generating a blank 
   config: '{:user-config-path}/program-name/config.yaml'
 auth-variables:  # insecure static variables
   # a dynamic configs + auth store combination should always be able to return a value for each of these
+  test-config-vars: [
+    '{:cwd}/share/orthauth/.does-not-exist',
+    '{:prefix}/share/orthauth/.does-not-exist',
+    '{:user-cache-path}/orthauth/.does-not-exist',
+    '{:user-config-path}/orthauth/.does-not-exist',
+    '{:user-data-path}/orthauth/.does-not-exist',
+    '{:user-log-path}/orthauth/.does-not-exist']
   default-example:
     environment-variables: EV
     default: 42
