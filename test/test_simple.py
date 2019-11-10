@@ -37,17 +37,30 @@ class TestSimple(unittest.TestCase):
         self.auth = oa.AuthConfig(sc)
 
     def test_config_vars(self):
-        hrm = self.auth.get('test-config-vars')
-        path = self.auth.get_path('test-config-vars')
-        oa.utils.log.debug(hrm)
-        assert path.as_posix() == sys.prefix + hrm.split('}', 1)[-1]
+        g = self.auth.get('test-config-vars')
+        d = self.auth.get_default('test-config-vars')
+        assert g != d
+        gtv = self.auth._pathit(g)
+        dtv = self.auth._pathit(d)
+        assert gtv != dtv
+
+        test = self.auth.get_path('test-config-vars')
+        assert test == pathlib.Path(sys.prefix, 'share/orthauth/.does-not-exist')
+        assert test == gtv
+        assert test != dtv
 
     def test_get_default(self):
-        hrm = self.auth.get_default('test-config-vars')
-        path = self.auth.get_path_default('test-config-vars')
-        oa.utils.log.debug(hrm)
-        tv = pathlib.Path.cwd().as_posix() + hrm.split('}', 1)[-1]
-        assert path.as_posix() == tv
+        g = self.auth.get('test-config-vars')
+        d = self.auth.get_default('test-config-vars')
+        assert g != d
+        gtv = self.auth._pathit(g)
+        dtv = self.auth._pathit(d)
+        assert gtv != dtv
+
+        test = self.auth.get_path_default('test-config-vars')
+        assert test == pathlib.Path.cwd() / 'share/orthauth/.does-not-exist'
+        assert test != gtv
+        assert test == dtv
 
     def test_dynamic(self):
         print(self.auth)
