@@ -36,6 +36,10 @@ class TestSimple(unittest.TestCase):
         sc = test_folder / 'static-1.yaml'
         self.auth = oa.AuthConfig(sc)
 
+    def test_null_path(self):
+        assert self.auth.get('test-null-path') is None
+        assert self.auth.get_path('test-null-path') is None
+
     def test_config_vars(self):
         g = self.auth.get('test-config-vars')
         d = self.auth.get_default('test-config-vars')

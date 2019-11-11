@@ -459,6 +459,9 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
         var = self.get(variable_name, for_path=True)
+        if var == [None]:
+            return
+
         if isinstance(var, list):
             if not var:
                 return
@@ -584,7 +587,10 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
                 return d
         else:
             def get_default(d):
-                return str(d[0])
+                if len(d) == 1 and d[0] is None:
+                    return
+                else:
+                    return str(d[0])
 
         for f, v in zip((getenv, self._get, get_default),
                         (envars, paths, defaults)):
