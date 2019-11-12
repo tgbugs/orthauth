@@ -266,14 +266,15 @@ class ConfigBase:
     def _envars(var_config):
         envars = []
         # env
-        for evkey in ('environment-variables', 'env-vars'):
+        for evkey in ('environment-variables', 'env-vars', 'envars'):
             if evkey in var_config:
                 ev = var_config[evkey]
                 if isinstance(ev, str):
                     envars += ev.split(' ')
+                elif isinstance(ev, list):
+                    envars += ev
                 else:
-                    if 'envars' in ev:
-                        envars += ev['envars'].split(' ')
+                    raise TypeError(f'unsupported type {type(ev)}\n{ev}')
 
         return envars
 

@@ -31,11 +31,7 @@ auth-variables:
   paths-example:  # path must be defined in the user config otherwise failure will ensue
     path: user defined path to key
   full-complexity-example:
-    environment-variables:
-      shading: HIGHEST_PRIORITY HIGHER_PRIORITY_API_KEY {insecure-dynamic-env}
-      shaded: LOW_PRIORITY_API_KEY LOWEST_PRIORITY_API_KEY
-      #dev: MY_PROD_VAR  # do dynamic options work here? no, because we don't know the checking logic
-      #test: MY_TEST_VAR
+    environment-variables: MYENV
     paths:  # alternate syntax ? maybe ?
     - look here first
     - look here second

@@ -96,6 +96,14 @@ class TestSimple(unittest.TestCase):
     def test_implicit_env(self):
         assert self.auth.get('env-example') == os.environ.get('USER', None)
 
+    def test_env_list(self):
+        tv = 'so'
+        os.environ['QUITE'] = tv
+        try:
+            assert self.auth.get('env-list-example') == tv
+        finally:
+            os.environ.pop('QUITE')
+
     def test_default(self):
         assert self.auth.get('default-example') == '42'
 

@@ -24,7 +24,15 @@ auth-variables:  # insecure static variables
     default: 42
   env-example:
     environment-variables: IMPLICITLY_SHADING_VARIABLES USER GROUP
-    shaded: ENV_VAR_SHADED_BY_PATHS
+    shaded: ENV_VAR_SHADED_BY_PATHS  # XXX
+  env-list-example:
+    environment-variables:
+      - MY
+      - LIST
+      - IS
+      - QUITE
+      - LONG
+      - GROUP
   paths-example:  # path must be defined in the user config otherwise failure will ensue
   full-complexity-example:
     environment-variables: ENV_FROM_STATIC
