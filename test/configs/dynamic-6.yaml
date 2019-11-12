@@ -1,0 +1,3 @@
+auth-variables:
+  test-alt-config-single: alt config single value
+  under-a-different-name: alt config single rename value

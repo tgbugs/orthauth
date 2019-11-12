@@ -15,6 +15,8 @@ auth-variables:  # insecure static variables
     '{:user-data-path}/orthauth/.does-not-exist',
     '{:user-log-path}/orthauth/.does-not-exist']
   test-null-path: null
+  test-alt-config-single: null
+  test-alt-config-single-rename: null
   default-example:
     environment-variables: EV
     default: 42

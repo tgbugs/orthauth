@@ -1,0 +1,4 @@
+config-search-paths:
+  - dynamic-5.yaml
+auth-variables:
+  test-top-level-alt-config:

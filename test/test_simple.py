@@ -11,7 +11,7 @@ class TestAuthConfig(unittest.TestCase):
     def test_auth_config_in_binary_blob(self):
         auth = oa.configure_relative('auth-config.py')
         blob = auth.load_type()
-        assert blob == {'config-search-paths': ['../test/dynamic-1.yaml'],
+        assert blob == {'config-search-paths': ['../test/configs/dynamic-1.yaml'],
                         'auth-variables': {'hrm': 'derp'}}
 
 
@@ -26,9 +26,11 @@ class TestConfigure(unittest.TestCase):
         assert test == self.tv
 
     def test_configure_relative(self):
-        auth = oa.configure_relative('static-1.yaml')
+        auth = oa.configure_relative('static-0.yaml')
         test = auth.load_type()
-        assert test == self.tv
+        tv = {'config-search-paths': ['configs/dynamic-1.yaml'],
+              'auth-variables': {'default-example': None}}
+        assert test == tv
 
 
 class TestSimple(unittest.TestCase):

@@ -1,0 +1,4 @@
+config-search-paths:
+  - dynamic-7.yaml
+auth-variables:
+  name-that-would-collide-or-something:

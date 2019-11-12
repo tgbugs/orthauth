@@ -4,6 +4,31 @@ import orthauth as oa
 from .common import test_folder
 
 
+class TestAltConfig(unittest.TestCase):
+    single = test_folder / 'static-1.yaml'
+    top = test_folder / 'static-5.yaml'
+    top_rename = test_folder / 'static-6.yaml'
+    def test_single(self):
+        auth = oa.configure(self.single)
+        tv = 'alt config single value'
+        test = auth.get('test-alt-config-single')
+        assert test == tv
+    def test_single_rename(self):
+        auth = oa.configure(self.single)
+        tv = 'alt config single rename value'
+        test = auth.get('test-alt-config-single-rename')
+        assert test == tv
+    def test_top(self):
+        auth = oa.configure(self.top)
+        tv = 'alt config top value'
+        test = auth.get('test-top-level-alt-config')
+        assert test == tv
+    def test_top_rename(self):
+        auth = oa.configure(self.top_rename)
+        tv = 'alt config top rename value'
+        test = auth.get('name-that-would-collide-or-something')
+        assert test == tv
+
 class TestInclude(unittest.TestCase):
     p1 = test_folder / 'static-1.yaml'
     p2 = test_folder / 'static-2.json'
