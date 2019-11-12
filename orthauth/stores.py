@@ -1,7 +1,7 @@
 import os
 import stat
 from . import exceptions as exc
-from .utils import QuietDict
+from .utils import QuietDict, log
 
 try:
     import yaml  # FIXME DANGERZONE :/
