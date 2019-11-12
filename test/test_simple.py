@@ -14,6 +14,14 @@ class TestAuthConfig(unittest.TestCase):
         assert blob == {'config-search-paths': ['../test/configs/dynamic-1.yaml'],
                         'auth-variables': {'hrm': 'derp'}}
 
+    def test_bad_alt_config(self):
+        try:
+            auth = oa.configure(test_folder / 'static-bad-alt-config.yaml')
+            auth.get('test')
+            raise AssertionError('should have failed')
+        except oa.exceptions.BadAuthConfigFormatError:
+            pass
+
 
 class TestConfigure(unittest.TestCase):
     def setUp(self):

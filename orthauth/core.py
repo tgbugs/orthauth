@@ -2,16 +2,15 @@ import os
 import ast
 import sys
 import json
-import stat
 import inspect
 import pathlib
 import functools
 import importlib
 from pprint import pformat
+from . import stores
 from . import exceptions as exc
 from .utils import branches, getenv, parse_paths
 from .utils import log, logd
-from .utils import QuietDict
 
 try:
     import yaml  # FIXME DANGERZONE :/
@@ -34,6 +33,113 @@ def configure_relative(name, include=tuple()):
                                           name,
                                           include=include,
                                           calling_module=calling_module)
+
+
+class DecoBase:
+    def environ(self, set_envar, from_name, when=True):
+        """ in order to use orthauth with other projects that are not aware of
+            its existence and that make use of environment variables orthauth
+            can set the envar that the other project expects using a value from
+            an orthauth managed auth store """
+        raise NotImplementedError('TODO')
+
+    def tangential_init(self, inject_value, with_name, when=True, after=False):
+        """ tangential decorator that defaults to atInit since it is a common use case
+
+            note that this can be used to monkey patch classes as well """
+        atInit = 'after' if after else True
+        return self.tangential(inject_value, with_name, when=when, atInit=atInit)
+
+    def tangential(self, inject_value, with_name, when=True, asProperty=False, atInit=False):
+        """ class decorator
+            the tangential auth decorator makes a name available to
+            all instances of a class from class creation time, this
+            this is not fully orthogonal, but makes it easier to
+            separate the logic of an API from the logic of its auth
+
+            In some cases this can be used to overwrite an auth variable
+            in a class from a project that is unaware that orthauth exists.
+
+            atInit='after' -> bind the value after the original __init__
+            instead of before, useful in cases where the value is set
+            during __init__ """
+
+        if not when:
+            # FIXME not ready
+            return lambda cls: cls
+
+        if asProperty and atInit:
+            raise ValueError('asProperty and atInit are mutually exclusive')
+
+        @property
+        def tangential_property(self, outer_self=self, name=with_name):
+            return outer_self.get(name)
+
+        def cdecorator(cls=None, asProperty=asProperty, atInit=atInit):
+            if asProperty and atInit:
+                raise ValueError('asProperty and atInit are mutually exclusive')
+
+            if cls is None:
+                if asProperty:
+                    def inner_cdec(icls):
+                        setattr(icls, inject_value, tangential_property)
+                        return icls
+
+                    return inner_cdec
+                elif atInit:
+                    if atInit == 'after':
+                        def inner_cdec(icls):
+                            cls__init__ = cls.__init__
+                            @functools.wraps(cls__init__)
+                            def __init__(inner_self, *args, **kwargs):
+                                cls__init__(inner_self, *args, **kwargs)
+                                setattr(inner_self, inject_value, self.get(with_name))
+
+                            setattr(icls, '__init__', __init__)
+                            return icls
+                    else:  # life-without-macros
+                        def inner_cdec(icls):
+                            cls__init__ = cls.__init__
+                            @functools.wraps(cls__init__)
+                            def __init__(inner_self, *args, **kwargs):
+                                setattr(inner_self, inject_value, self.get(with_name))
+                                cls__init__(inner_self, *args, **kwargs)
+
+                            setattr(icls, '__init__', __init__)
+                            return icls
+
+                    return inner_cdec
+                else:
+                    def inner_cdec(icls):
+                        setattr(icls, inject_value, self.get(with_name))
+                        return icls
+
+                    return inner_cdec
+
+            elif asProperty:
+                setattr(cls, inject_value, tangential_property)
+
+            elif atInit:
+                cls__init__ = cls.__init__
+                if atInit == 'after':
+                    @functools.wraps(cls__init__)
+                    def __init__(inner_self, *args, **kwargs):
+                        cls__init__(inner_self, *args, **kwargs)
+                        setattr(inner_self, inject_value, self.get(with_name))
+                else:
+                    @functools.wraps(cls__init__)
+                    def __init__(inner_self, *args, **kwargs):
+                        setattr(inner_self, inject_value, self.get(with_name))
+                        cls__init__(inner_self, *args, **kwargs)
+
+                setattr(cls, '__init__', __init__)
+
+            else:
+                setattr(cls, inject_value, self.get(with_name))
+
+            return cls
+
+        return cdecorator
 
 
 class ConfigBase:
@@ -173,6 +279,12 @@ class ConfigBase:
 
     @staticmethod
     def _paths(var_config):
+        if 'config' in var_config:
+            if [_ for _ in ('path', 'paths', 'paths-nested') if _ in var_config]:
+                raise TypeError('can only have config or path, not both')
+
+            return []
+
         raw_paths = []
         # paths
         if 'path' in var_config:
@@ -190,6 +302,14 @@ class ConfigBase:
             raise e  # TODO message about where missing from
 
         return paths
+
+    @staticmethod
+    def _single_alt_configs(var_config):
+        if 'config' in var_config:
+            if 'path' in var_config:
+                raise TypeError('can only have config or path, not both')
+
+            return var_config
 
     def _pathit(self, path_string):
         if '{:' in path_string:  # special paths  # FIXME vs startswith
@@ -243,7 +363,7 @@ class ConfigBase:
         }
 
 
-class AuthConfig(ConfigBase):  # FIXME this is more a schema?
+class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
     """ Object representation of a static configuration file
     that lives in a repository and that changes only when some
     change needs to be made to a decorator in the code base that
@@ -256,13 +376,22 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
     def _from_relative_path(cls, calling__file__, name, include=tuple(), calling_module=None):
         self = super().__new__(cls, pathlib.Path(calling__file__).parent / name, include=include)
         self._calling_module = calling_module
-        self.dynamic_config = UserConfig(self)
+        self._dynamic_config = UserConfig(self)
         return self
 
     def __new__(cls, path, include=tuple()):
         self = super().__new__(cls, path, include=include)
-        self.dynamic_config = UserConfig(self)
+        self._dynamic_config = UserConfig(self)
         return self
+
+    @property
+    def dynamic_config(self):
+        dc = self._dynamic_config
+        ac = dc.alt_config
+        if ac:
+            dc = ac
+        
+        return dc
 
     @property
     def dynamic_config_paths(self):
@@ -293,128 +422,6 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
             raise KeyError(f'{names}')
 
         return blob
-
-    def environ(self, set_envar, from_name, when=True):
-        """ in order to use orthauth with other projects that are not aware of
-            its existence and that make use of environment variables orthauth
-            can set the envar that the other project expects using a value from
-            an orthauth managed auth store """
-        raise NotImplementedError('TODO')
-
-    def tangential_init(self, inject_value, with_name, when=True, after=False):
-        """ tangential decorator that defaults to atInit since it is a common use case """
-        atInit = 'after' if after else True
-        return self.tangential(inject_value, with_name, when=when, atInit=atInit)
-
-    def tangential(self, inject_value, with_name, when=True, asProperty=False, atInit=False):
-        """ class decorator
-            the tangential auth decorator makes a name available to
-            all instances of a class from class creation time, this
-            this is not fully orthogonal, but makes it easier to
-            separate the logic of an API from the logic of its auth
-
-            In some cases this can be used to overwrite an auth variable
-            in a class from a project that is unaware that orthauth exists.
-
-            atInit='after' -> bind the value after the original __init__
-            instead of before, useful in cases where the value is set
-            during __init__ """
-
-        if not when:
-            # FIXME not ready
-            return lambda cls: cls
-
-        if asProperty and atInit:
-            raise ValueError('asProperty and atInit are mutually exclusive')
-
-        @property
-        def tangential_property(self, outer_self=self, name=with_name):
-            return outer_self.get(name)
-
-        def cdecorator(cls=None, asProperty=asProperty, atInit=atInit):
-            if asProperty and atInit:
-                raise ValueError('asProperty and atInit are mutually exclusive')
-
-            if cls is None:
-                if asProperty:
-                    def inner_cdec(icls):
-                        setattr(icls, inject_value, tangential_property)
-                        return icls
-
-                    return inner_cdec
-                elif atInit:
-                    if atInit == 'after':
-                        def inner_cdec(icls):
-                            cls__init__ = cls.__init__
-                            @functools.wraps(cls__init__)
-                            def __init__(inner_self, *args, **kwargs):
-                                cls__init__(inner_self, *args, **kwargs)
-                                setattr(inner_self, inject_value, self.get(with_name))
-
-                            setattr(icls, '__init__', __init__)
-                            return icls
-                    else:  # life-without-macros
-                        def inner_cdec(icls):
-                            cls__init__ = cls.__init__
-                            @functools.wraps(cls__init__)
-                            def __init__(inner_self, *args, **kwargs):
-                                setattr(inner_self, inject_value, self.get(with_name))
-                                cls__init__(inner_self, *args, **kwargs)
-
-                            setattr(icls, '__init__', __init__)
-                            return icls
-
-                    return inner_cdec
-                else:
-                    def inner_cdec(icls):
-                        setattr(icls, inject_value, self.get(with_name))
-                        return icls
-
-                    return inner_cdec
-
-            elif asProperty:
-                setattr(cls, inject_value, tangential_property)
-
-            elif atInit:
-                cls__init__ = cls.__init__
-                if atInit == 'after':
-                    @functools.wraps(cls__init__)
-                    def __init__(inner_self, *args, **kwargs):
-                        cls__init__(inner_self, *args, **kwargs)
-                        setattr(inner_self, inject_value, self.get(with_name))
-                else:
-                    @functools.wraps(cls__init__)
-                    def __init__(inner_self, *args, **kwargs):
-                        setattr(inner_self, inject_value, self.get(with_name))
-                        cls__init__(inner_self, *args, **kwargs)
-
-                setattr(cls, '__init__', __init__)
-
-            else:
-                setattr(cls, inject_value, self.get(with_name))
-
-            return cls
-
-        return cdecorator
-
-    def _get(self, paths):
-        secrets = self.dynamic_config.secrets
-        errors = []
-        for names in paths:
-            auth_store = self.dynamic_config.path_source(*names)  # FIXME perf issue incoming
-            try:
-                return auth_store(*names)
-            except KeyError as e:
-                errors.append(e)
-                logd.error(f'broken path {names}')
-                if auth_store != secrets:
-                    try:
-                        return secrets(*names)
-                    except KeyError as e:
-                        errors.append(e)
-
-        if errors:
-            raise KeyError(f'{[e.args[0] for e in errors]}') from errors[-1]
 
     def __call__(self, cls_or_function):
         raise NotImplementedError
@@ -582,7 +589,16 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
         paths = self._paths(dvar_config)
         paths += self._paths(var_config)
 
-        if 'for_path' in kwargs and kwargs['for_path']:
+        bads = self._single_alt_configs(var_config)  # for error purposes only
+        if bads:
+            msg = ('static configs should never define single atl configs\n'
+                   f'{bads} in {self._path}')
+            raise exc.BadAuthConfigFormatError(msg)
+
+        for_path = 'for_path' in kwargs and kwargs['for_path']
+        alt = self._single_alt_configs(dvar_config), variable_name, for_path
+
+        if for_path:
             def get_default(d):
                 return d
         else:
@@ -592,8 +608,11 @@ class AuthConfig(ConfigBase):  # FIXME this is more a schema?
                 else:
                     return str(d[0])
 
-        for f, v in zip((getenv, self._get, get_default),
-                        (envars, paths, defaults)):
+        for f, v in zip((getenv,
+                         self.dynamic_config._get,
+                         self.dynamic_config._gsac_wrap,
+                         get_default),
+                        (envars, paths, alt, defaults)):
             if v:
                 SECRET = f(v)
                 if SECRET is not None:
@@ -613,6 +632,29 @@ class UserConfig(ConfigBase):
     to steal credentials that you will be sending to that endpoint
     """
 
+    @classmethod
+    def _from_dynamic_alt_config(cls, path, static_config, rename=None):
+        # TODO rename
+        self = super().__new__(cls, path)
+        if rename:
+            self.__rename = rename
+            self.load_type = self._rename_load_type
+
+        self.static_config = static_config
+        return self
+
+    def _rename_load_type(self):
+        blob = super().load_type()
+        av = blob['auth-variables']
+        log.debug(self.__rename)
+        [log.debug(k) for k in av.keys()]
+        for to, frm in self.__rename.items():
+            if frm in av:
+                av[to] = av.pop(frm)
+
+        [log.debug(k) for k in av.keys()]
+        return blob
+
     def __new__(cls, static_config):
         path = static_config.dynamic_config_path
         self = super().__new__(cls, path)
@@ -631,19 +673,129 @@ class UserConfig(ConfigBase):
             raise exc.UnknownAuthStoreType(type_)
 
     def _authinfo(self, blob):
-        return Authinfo(self._blob_path(blob))
+        return stores.Authinfo(self._blob_path(blob))
 
     def _secrets(self, blob):
-        return Secrets(self._blob_path(blob))
+        return stores.Secrets(self._blob_path(blob))
 
     def _mypass(self, blob):
-        return Mypass(self._blob_path(blob))
+        return stores.Mypass(self._blob_path(blob))
 
     def _ssh_config(self, blob):
-        return SshConfig(self._blob_path(blob))
+        return stores.SshConfig(self._blob_path(blob))
 
     def _blob_path(self, blob):
         return self._pathit(blob['path'])
+
+    def get(self, variable_name, *args, **kwargs):
+        """ look up the value of a variable name from auth store or config """
+        # ah the problem of interleveing values from sources of different rank ...
+        var_config = self.get_blob('auth-variables', variable_name)
+        if var_config is None:
+            raise KeyError(variable_name)
+
+        defaults = []
+        if not isinstance(var_config, dict):
+            if isinstance(var_config, list):
+                if ('for_path' not in kwargs or not kwargs['for_path']):
+                    log.warning(f'attempting to get a default value for {variable_name} '
+                                'that is a list did you want get_path?')
+
+                defaults.extend(var_config)
+            else:
+                defaults.append(var_config)
+
+            var_config = {}
+
+        envars = self._envars(var_config)
+        paths = self._paths(var_config)
+        for_path = 'for_path' in kwargs and kwargs['for_path']
+        alt = self._single_alt_configs(var_config), variable_name, for_path
+
+        if for_path:
+            def get_default(d):
+                return d
+        else:
+            def get_default(d):
+                if len(d) == 1 and d[0] is None:
+                    return
+                else:
+                    return str(d[0])
+
+        for f, v in zip((getenv,
+                         self._get,
+                         self._gsac_wrap,
+                         get_default),
+                        (envars, paths, alt, defaults)):
+            if v:
+                SECRET = f(v)
+                if SECRET is not None:
+                    return SECRET
+
+    def _get(self, paths):
+        secrets = self.secrets
+        errors = []
+        for names in paths:
+            auth_store = self.path_source(*names)  # FIXME perf issue incoming
+            try:
+                return auth_store(*names)
+            except KeyError as e:
+                errors.append(e)
+                logd.error(f'broken path {names}')
+                if auth_store != secrets:
+                    try:
+                        return secrets(*names)
+                    except KeyError as e:
+                        errors.append(e)
+
+        if errors:
+            raise KeyError(f'{[e.args[0] for e in errors]}') from errors[-1]
+
+    def _gsac_wrap(self, args):
+        return self._get_single_alt_config(*args)
+
+    def _get_single_alt_config(self, blob, variable, for_path=False):
+        # FIXME relative paths get funky here
+        if blob:
+            config = blob['config']
+            path = self._pathit(config)
+            rename = blob.get('rename', None)
+            if rename is not None:
+                variable = rename
+
+            adc = self._from_dynamic_alt_config(path, self.static_config)
+            return adc.get(variable, for_path=for_path)
+
+    @property
+    def _alt_config_path(self):
+        blob = self.get_blob('alt-config')
+        if not isinstance(blob, str):
+            raise TypeError('only a single alt config is allowed')
+        else:
+            return self._pathit(blob)
+
+    @property
+    def _rename(self):
+        blob = self.get_blob('rename')
+        if not isinstance(blob, str):
+            raise TypeError('only a single alt config is allowed')
+        else:
+            return self._pathit(blob)
+
+    @property
+    def alt_config(self):
+        try:
+            path = self._alt_config_path
+            _test = self.load_type()
+            _test.pop('alt-config')
+            rename = _test.pop('rename', None)
+            if _test:
+                raise ValueError('configs with top level alt-config may '
+                                 f'have only a rename section\n{_test}')
+
+            return self._from_dynamic_alt_config(path, self.static_config, rename)
+        except KeyError:
+            pass
 
     @property
     def secrets(self):
@@ -684,123 +836,3 @@ class UserConfig(ConfigBase):
 
         else:
             return self.secrets
-
-
-class Authinfo:
-    def __init__(self, path):
-        if isinstance(path, str):
-            path = pathlib.Path(path)
-
-        self._path = path
-
-    def __call__(self, *names):
-        raise NotImplementedError('TODO')
-
-
-class Mypass:
-    def __init__(self, path):
-        if isinstance(path, str):
-            path = pathlib.Path(path)
-
-        self._path = path
-
-    def __call__(self, *names):
-        raise NotImplementedError('TODO')
-
-
-class SshConfig:
-    def __init__(self, path):
-        if isinstance(path, str):
-            path = pathlib.Path(path)
-
-        self._path = path
-
-    def __call__(self, *names):
-        raise NotImplementedError('TODO')
-
-
-class Secrets:
-    def __init__(self, path):
-        if isinstance(path, str):
-            path = pathlib.Path(path)
-
-        self._path = path
-        if self.exists:
-            fstat = os.stat(self._path)
-            mode = oct(stat.S_IMODE(fstat.st_mode))
-            if mode != '0o600' and mode != '0o700':
-                raise FileNotFoundError(f'Your secrets file {self._path} '
-                                        f'can be read by the whole world! {mode}')
-
-    @property
-    def filename(self):
-        return self._path.as_posix()
-
-    @property
-    def exists(self):
-        """ Fail early and often when missing a file that is supposed to exist """
-        e = self._path.exists()
-        if not e:
-            raise FileNotFoundError(self._path)
-
-        return e
-
-    @property
-    def name_id_map(self):
-        # sometimes the easiest solution is just to read from disk every single time
-        if self.exists:
-            with open(self.filename, 'rt') as f:
-                return QuietDict(yaml.safe_load(f))
-
-    def __call__(self, *names):
-        if self.exists:
-            nidm = self.name_id_map
-            # NOTE under these circumstances this pattern is ok because anyone
-            # or anything who can call this function can access the secrets file.
-            # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
-            # secrets could be exposted by brute force, but in thise case it is ok
-            # because it is more important to alert the user that they have just
-            # tried to use a secret as a name and that it might be in their code.
-            def all_values(d):
-                for v in d.values():
-                    if isinstance(v, dict):
-                        yield from all_values(v)
-                    else:
-                        yield v
-
-            av = set(all_values(nidm))
-            current = nidm
-            nidm = None
-            del nidm
-            for name in names:
-                if name in av:
-                    ANGRY = '*' * len(name)
-                    av = None
-                    name = None
-                    names = None
-                    current = None
-                    del av
-                    del name
-                    del names
-                    del current
-                    raise exc.SecretAsKeyError(f'WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
-                else:
-                    try:
-                        current = current[name]
-                    except KeyError as e:
-                        av = None
-                        name = None
-                        names = None
-                        current = None
-                        del av
-                        del name
-                        del names
-                        del current
-                        raise e
-
-            if isinstance(current, dict):
-                raise ValueError(f'Your secret path is incomplete. Keys are {sorted(current.keys())}')
-
-            if '-file' in name and current.startswith('~/'):  # FIXME usability hack to allow ~/ in filenames
-                current = pathlib.Path(current).expanduser().as_posix()  # for consistency with current practice, keep paths as strings
-            return current

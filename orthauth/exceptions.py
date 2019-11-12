@@ -28,3 +28,7 @@ class ConfigExistsError(OrthauthError):
 
 class VariableCollisionError(OrthauthError):
     """ a variable is colliding between configs """
+
+
+class BadAuthConfigFormatError(OrthauthError):
+    """ that's some baaaaad data """

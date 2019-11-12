@@ -1,5 +1,4 @@
-from orthauth.core import (Secrets,
-                           AuthConfig,
+from orthauth.core import (AuthConfig,
                            configure,
                            configure_relative,)
 
