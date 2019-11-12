@@ -49,11 +49,15 @@ class Secrets:
 
         self._path = path
         if self.exists:
-            fstat = os.stat(self._path)
-            mode = oct(stat.S_IMODE(fstat.st_mode))
-            if mode != '0o600' and mode != '0o700':
-                raise FileNotFoundError(f'Your secrets file {self._path} '
-                                        f'can be read by the whole world! {mode}')
+            if os.name == 'nt':
+                log.warning('Make sure other user cannot read your secrets file '
+                            'because right at the moment I don\'t know how to check.')
+            else:
+                fstat = os.stat(self._path)
+                mode = oct(stat.S_IMODE(fstat.st_mode))
+                if mode != '0o600' and mode != '0o700':
+                    raise FileNotFoundError(f'Your secrets file {self._path} '
+                                            f'can be read by the whole world! {mode}')
 
     @property
     def filename(self):
