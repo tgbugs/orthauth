@@ -1,5 +1,13 @@
 #+TITLE: orthauth user guide
 
+* Workflows
+I have a problem and I want to do X
+** A package I use doesn't set environment variables for a value
+Add the environment variables to your user config and ask the maintainer
+to add some in the next version. In the mean time if you need to test
+using the variables install a user config with only the variables you
+need to add. This allows development to continue as if upstream already
+provided them, and prevents having to make other changes in the future.
 * Example
 ** Config files
 #+NAME: auth-config
