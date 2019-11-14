@@ -2,4 +2,4 @@ from orthauth.core import (AuthConfig,
                            configure,
                            configure_relative,)
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
