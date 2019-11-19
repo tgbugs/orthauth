@@ -1,5 +1,6 @@
 import os
 import stat
+import pathlib
 from . import exceptions as exc
 from .utils import QuietDict, log
 
