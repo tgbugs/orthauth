@@ -484,8 +484,12 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                 return
 
             first = None
+            warnings = []
             for v in var:
                 if v is None:
+                    if warnings:
+                        for w in warnings:
+                            log.warning(w)
                     msg = f'{variable_name} in {self._path}'
                     raise exc.SomethingWrongWithVariableInConfig(msg)
 
@@ -496,11 +500,12 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                 if p.exists():
                     return p
                 else:
+                    msg = (f'path for {variable_name} does not exist, '
+                           'did you enter a path: as a value?')
                     # never log v or any values derived from v as they
                     # might be secrets, the user will have to figure out
                     # where they messed up by looking at the configs directly
-                    log.warning(f'path for {variable_name} does not exist, '
-                                'did you enter a path: as a value?')
+                    warnings.append(msg)
             else:
                 return first
 
