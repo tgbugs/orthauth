@@ -313,17 +313,26 @@ class ConfigBase:
             return var_config
 
     def _pathit(self, path_string):
-        if '{:' in path_string:  # special paths  # FIXME vs startswith
-            path_string = path_string.replace('{:', '{')
-            path_string = path_string.format(**self._config_vars)
+        return self._pathit_relative(self._path.parent, path_string)
 
-        path = pathlib.Path(path_string)
+    def _pathit_relative(self, relative_base, path_string):
+        if not isinstance(path_string, pathlib.Path):
+            if '{:' in path_string:  # special paths  # FIXME vs startswith
+                path_string = path_string.replace('{:', '{')
+                path_string = path_string.format(**self._config_vars)
+
+            path = pathlib.Path(path_string)
+        else:
+            path = path_string
 
         if path.parts[0] == ('~'):
             path = path.expanduser()
 
         if not path.is_absolute():
-            path = self._path.parent / path
+            path = relative_base / path
+
+        if '..' in path.parts:
+            path = path.resolve()
 
         return path
 
@@ -521,12 +530,13 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
     def get(self, variable_name, *args, **kwargs):
         """ look up the value of a variable name from auth store or config """
+        for_path = 'for_path' in kwargs and kwargs['for_path']
         av = self.get_blob('auth-variables')
         if variable_name not in av:
             error = None
             for i in self._include:
                 try:
-                    return i.get(variable_name)
+                    return i.get(variable_name, **kwargs)
                 except KeyError as e:
                     error = e
             else:
@@ -557,7 +567,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         defaults = []
         if not isinstance(dvar_config, dict):
             if isinstance(dvar_config, list):
-                if ('for_path' not in kwargs or not kwargs['for_path']):
+                if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
 
@@ -569,7 +579,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
         if not isinstance(var_config, dict):
             if isinstance(var_config, list):
-                if ('for_path' not in kwargs or not kwargs['for_path']):
+                if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
 
@@ -596,13 +606,14 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                    f'{bads} in {self._path}')
             raise exc.BadAuthConfigFormatError(msg)
 
-        for_path = 'for_path' in kwargs and kwargs['for_path']
         alt = self._single_alt_configs(dvar_config), variable_name, for_path
 
         if for_path:
+            get_dc = self.dynamic_config._get_path
             def get_default(d):
                 return d
         else:
+            get_dc = self.dynamic_config._get
             def get_default(d):
                 if len(d) == 1 and d[0] is None:
                     return
@@ -610,7 +621,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                     return str(d[0])
 
         for f, v in zip((getenv,
-                         self.dynamic_config._get,
+                         get_dc,
                          self.dynamic_config._gsac_wrap,
                          get_default),
                         (envars, paths, alt, defaults)):
@@ -699,6 +710,7 @@ class UserConfig(ConfigBase):
     def get(self, variable_name, *args, **kwargs):
         """ look up the value of a variable name from auth store or config """
         # ah the problem of interleveing values from sources of different rank ...
+        for_path = 'for_path' in kwargs and kwargs['for_path']
         var_config = self.get_blob('auth-variables', variable_name)
         if var_config is None:
             raise KeyError(variable_name)
@@ -706,7 +718,7 @@ class UserConfig(ConfigBase):
         defaults = []
         if not isinstance(var_config, dict):
             if isinstance(var_config, list):
-                if ('for_path' not in kwargs or not kwargs['for_path']):
+                if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
 
@@ -718,7 +730,6 @@ class UserConfig(ConfigBase):
 
         envars = self._envars(var_config)
         paths = self._paths(var_config)
-        for_path = 'for_path' in kwargs and kwargs['for_path']
         alt = self._single_alt_configs(var_config), variable_name, for_path
 
         if for_path:
@@ -732,7 +743,7 @@ class UserConfig(ConfigBase):
                     return str(d[0])
 
         for f, v in zip((getenv,
-                         self._get,
+                         self._get_path if for_path else self._get,
                          self._gsac_wrap,
                          get_default),
                         (envars, paths, alt, defaults)):
@@ -741,19 +752,27 @@ class UserConfig(ConfigBase):
                 if SECRET is not None:
                     return SECRET
 
+    def _get_path(self, paths):
+        store_path, value = self._get_with_path(paths)
+        return self._pathit_relative(store_path.parent, value)
+
     def _get(self, paths):
+        _, value = self._get_with_path(paths)
+        return value
+
+    def _get_with_path(self, paths):
         secrets = self.secrets
         errors = []
         for names in paths:
             auth_store = self.path_source(*names)  # FIXME perf issue incoming
             try:
-                return auth_store(*names)
+                return auth_store._path, auth_store(*names)
             except KeyError as e:
                 errors.append(e)
                 logd.error(f'broken path {names}')
                 if auth_store != secrets:
                     try:
-                        return secrets(*names)
+                        return secrets._path, secrets(*names)
                     except KeyError as e:
                         errors.append(e)
 

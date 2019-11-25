@@ -1,0 +1,6 @@
+auth-stores:
+  secrets:
+    path: ../secrets/secrets-2.yaml
+auth-variables:
+  rel-secrets-path:
+    path: alt path test

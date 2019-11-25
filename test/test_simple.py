@@ -4,7 +4,7 @@ import pathlib
 import unittest
 import yaml
 import orthauth as oa
-from .common import test_folder
+from .common import test_folder, s1, s2
 
 
 class TestAuthConfig(unittest.TestCase):
@@ -104,6 +104,10 @@ class TestSimple(unittest.TestCase):
         finally:
             os.environ.pop('QUITE')
 
+    def test_expanduser(self):
+        tv = pathlib.Path('~/').expanduser()
+        assert self.auth.get_path('test-expanduser') == tv
+
     def test_default(self):
         assert self.auth.get('default-example') == '42'
 
@@ -147,3 +151,14 @@ class TestMakeUserConfig(unittest.TestCase):
 
     def test_serialize_yaml(self):
         self._roundtrip('yaml')
+
+
+class TestWithStores(unittest.TestCase):
+    def setUp(self):
+        sc = test_folder / 'static-8.yaml'
+        self.auth = oa.AuthConfig(sc)
+
+    def test_path_relative_store(self):
+        tv = s2.parent / 'some-other-relative-path.ext'
+        test = self.auth.get_path('rel-secrets-path')
+        assert test == tv

@@ -19,6 +19,7 @@ auth-variables:  # insecure static variables
   test-alt-config-single-rename:
   test-top-level-alt-config:
   test-top-level-alt-config-rename:
+  test-expanduser: ~/
   default-example:
     environment-variables: EV
     default: 42
