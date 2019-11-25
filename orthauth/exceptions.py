@@ -32,3 +32,7 @@ class VariableCollisionError(OrthauthError):
 
 class BadAuthConfigFormatError(OrthauthError):
     """ that's some baaaaad data """
+
+
+class SomethingWrongWithVariableInConfig(OrthauthError):
+    """ a variable in a config is bad """

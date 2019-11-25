@@ -676,14 +676,22 @@ class UserConfig(ConfigBase):
     def _authinfo(self, blob):
         return stores.Authinfo(self._blob_path(blob))
 
+    def _get_store(self, store, blob):
+        path = self._blob_path(blob)
+        try:
+            return store(path)
+        except FileNotFoundError as e:
+            err = exc.SomethingWrongWithVariableInConfig(f'{path} in {self._path}')
+            raise err from e
+
     def _secrets(self, blob):
-        return stores.Secrets(self._blob_path(blob))
+        return self._get_store(stores.Secrets, blob)
 
     def _mypass(self, blob):
-        return stores.Mypass(self._blob_path(blob))
+        return self._get_store(stores.Mypass, blob)
 
     def _ssh_config(self, blob):
-        return stores.SshConfig(self._blob_path(blob))
+        return self._get_store(stores.SshConfig, blob)
 
     def _blob_path(self, blob):
         return self._pathit(blob['path'])
