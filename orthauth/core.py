@@ -485,12 +485,22 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
             first = None
             for v in var:
+                if v is None:
+                    msg = f'{variable_name} in {self._path}'
+                    raise exc.SomethingWrongWithVariableInConfig(msg)
+
                 p = self._pathit(v)
                 if first is None:
                     first = p
 
                 if p.exists():
                     return p
+                else:
+                    # never log v or any values derived from v as they
+                    # might be secrets, the user will have to figure out
+                    # where they messed up by looking at the configs directly
+                    log.warning(f'path for {variable_name} does not exist, '
+                                'did you enter a path: as a value?')
             else:
                 return first
 
