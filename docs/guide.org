@@ -3,7 +3,7 @@
 * Basic principles
 1. Values from a user config take priority over values from the static auth config.
 2. Environment variables take priority over any default variable or any variable from
-   and auth store path.
+   an auth store path.
 * Workflows
 I have a problem and I want to do X
 ** A package I use doesn't set environment variables for a value
