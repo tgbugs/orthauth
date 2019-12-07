@@ -1,5 +1,9 @@
 #+TITLE: orthauth user guide
 
+* Basic principles
+1. Values from a user config take priority over values from the static auth config.
+2. Environment variables take priority over any default variable or any variable from
+and auth store path.
 * Workflows
 I have a problem and I want to do X
 ** A package I use doesn't set environment variables for a value
@@ -9,7 +13,15 @@ using the variables install a user config with only the variables you
 need to add. This allows development to continue as if upstream already
 provided them, and prevents having to make other changes in the future.
 * Example
+See [[file:../test/configs/static-1.yaml]] (auth config)
+and [[file:../test/configs/dynamic-1.yaml]] (user config)
+for more examples with some explanatory comments.
 ** Config files
+An example =auth-config.yaml= file. The content of the auth config
+file should be static information or sane defaults that should be
+available regardless of any user configuration. Values defined in
+this file should rarely change, especially since auth variables are
+referred to directly in source code.
 #+NAME: auth-config
 #+begin_src yaml :tangle examples/auth-config.yaml
 config-search-paths:
@@ -24,6 +36,12 @@ auth-variables:
     environment-variables: SERVICE_HOST
     default: localhost
 #+end_src
+
+An example =user-config.yaml= file whose name and location is defined
+by =auth-config.yaml=. The user config provides a level of indirection
+between the static names of auth variables that are used in the code
+and their value and the location where they are stored or managed.
+
 #+NAME: user-config
 #+begin_src yaml :tangle examples/user-config.yaml
 auth-stores:
@@ -35,10 +53,13 @@ auth-variables:
   service-host: 0.0.0.0
   service-port: 80
 #+end_src
+
+An example =secrets.yaml= file whose location is specified by =user-config.yaml=.
 #+begin_src yaml :tangle examples/secrets.yaml :tangle-mode (identity #o0600)
 service:
   specific-user: oh look an api key!
 #+end_src
+
 ** Python
 Include the following in =config.py=, =utils.py=, or similar.
 #+begin_src python :tangle examples/config.py
@@ -48,7 +69,7 @@ auth = oa.configure(pathlib.Path(__file__).parent / 'auth-config.yaml')
 has_api_key = auth.tangential('api_key', 'service-api-key')
 #+end_src
 
-Use 
+Use the decorator to inject the value into the class.
 #+begin_src python :tangle examples/simple.py
 from config import auth, has_api_key
 

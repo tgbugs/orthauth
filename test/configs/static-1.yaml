@@ -6,8 +6,14 @@ default-paths:  # suggested locations for default paths when generating a blank 
   secrets: '{:user-config-path}/program-name/secrets.yaml'
   config: '{:user-config-path}/program-name/config.yaml'
 auth-variables:  # insecure static variables
-  # a dynamic configs + auth store combination should always be able to return a value for each of these
-  test-config-vars: [
+  # a dynamic configs + auth store combination should always
+  # be able to return a value for each of these
+  test-config-vars: [ # multiple paths provided as a default value are searched in order
+                      # until an existing path is found if no path is found then the first
+                      # path in the list is returned, note that default lists for non path
+                      # values are usually a mistake and orthauth will warn if it detects one
+                      # note that the distinction between path and string is made when the
+                      # value is accessed not when it is defined here
     '{:cwd}/share/orthauth/.does-not-exist',
     '{:prefix}/share/orthauth/.does-not-exist',
     '{:user-cache-path}/orthauth/.does-not-exist',
@@ -15,14 +21,21 @@ auth-variables:  # insecure static variables
     '{:user-data-path}/orthauth/.does-not-exist',
     '{:user-log-path}/orthauth/.does-not-exist']
   test-null-path: null
-  test-alt-config-single:
+  test-alt-config-single:  # empty or null paths usually indicate that
+                           # the value is expected to be handled entirely by the user config
+                           # in practice this is usually a bad idea because you usually
+                           # want to support at least one environment variable by default
   test-alt-config-single-rename:
   test-top-level-alt-config:
   test-top-level-alt-config-rename:
   test-expanduser: ~/
+  just-a-default-value-example: some-default-value
   default-example:
     environment-variables: EV
-    default: 42
+    default: 42  # a default value cannot be provided as a single string value
+                 # (as it is in just-a-default-value-example: above)
+                 # if environment-variables or secrets paths are specified as well
+                 # in such cases the value is provided under the nested default: key
   env-example:
     environment-variables: IMPLICITLY_SHADING_VARIABLES USER GROUP
     shaded: ENV_VAR_SHADED_BY_PATHS  # XXX
@@ -37,7 +50,7 @@ auth-variables:  # insecure static variables
   paths-example:  # path must be defined in the user config otherwise failure will ensue
   full-complexity-example:
     environment-variables: ENV_FROM_STATIC
-    path: suggest path
+    path: suggest path  # it is usually bad practice to specify a path in a static config
   paths-as-list-example:
     path: ['k1', 'k2']
   test-multi-path-1: [

@@ -1,7 +1,9 @@
 auth-stores:  # per dynamic config only 1 source per type
   # list in order of precedence ??
   secrets:
-    path: secrets-test-1.yaml  # relative paths start from the location of the config in question
+    path: secrets-test-1.yaml # relative paths start from the location of the
+                              # defining configuration file (e.g. in this case the folder
+                              # containing this dynamic-1.yaml file)
     # path: '{:user-config-path}/orthauth/secrets.yaml'  # default ...
   authinfo:
     path: ~/.authinfo
@@ -11,7 +13,7 @@ auth-stores:  # per dynamic config only 1 source per type
     path: ~/.ssh/config
   other:
     key-relevant-for-some-non-file-based-store
-path-sources:  # on failure to match only secrets is searched
+path-sources:  # on failure to match only the secrets store is searched
   mysql: mypass
   magithub: authinfo
   magithub other: secrets
