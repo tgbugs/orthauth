@@ -43,14 +43,14 @@ class DecoBase:
             an orthauth managed auth store """
         raise NotImplementedError('TODO')
 
-    def tangential_init(self, inject_value, with_name, when=True, after=False):
+    def tangential_init(self, inject_value, with_name, when=True, after=False, method='get'):
         """ tangential decorator that defaults to atInit since it is a common use case
 
             note that this can be used to monkey patch classes as well """
         atInit = 'after' if after else True
-        return self.tangential(inject_value, with_name, when=when, atInit=atInit)
+        return self.tangential(inject_value, with_name, when=when, atInit=atInit, method=method)
 
-    def tangential(self, inject_value, with_name, when=True, asProperty=False, atInit=False):
+    def tangential(self, inject_value, with_name, when=True, asProperty=False, atInit=False, method='get'):
         """ class decorator
             the tangential auth decorator makes a name available to
             all instances of a class from class creation time, this
@@ -73,9 +73,9 @@ class DecoBase:
 
         @property
         def tangential_property(self, outer_self=self, name=with_name):
-            return outer_self.get(name)
+            return getattr(outer_self, method)(name)
 
-        def cdecorator(cls=None, asProperty=asProperty, atInit=atInit):
+        def cdecorator(cls=None, asProperty=asProperty, atInit=atInit, method=method):
             if asProperty and atInit:
                 raise ValueError('asProperty and atInit are mutually exclusive')
 
@@ -93,7 +93,7 @@ class DecoBase:
                             @functools.wraps(cls__init__)
                             def __init__(inner_self, *args, **kwargs):
                                 cls__init__(inner_self, *args, **kwargs)
-                                setattr(inner_self, inject_value, self.get(with_name))
+                                setattr(inner_self, inject_value, getattr(self, method)(with_name))
 
                             setattr(icls, '__init__', __init__)
                             return icls
@@ -102,7 +102,7 @@ class DecoBase:
                             cls__init__ = cls.__init__
                             @functools.wraps(cls__init__)
                             def __init__(inner_self, *args, **kwargs):
-                                setattr(inner_self, inject_value, self.get(with_name))
+                                setattr(inner_self, inject_value, getattr(self, method)(with_name))
                                 cls__init__(inner_self, *args, **kwargs)
 
                             setattr(icls, '__init__', __init__)
@@ -111,7 +111,7 @@ class DecoBase:
                     return inner_cdec
                 else:
                     def inner_cdec(icls):
-                        setattr(icls, inject_value, self.get(with_name))
+                        setattr(icls, inject_value, getattr(self, method)(with_name))
                         return icls
 
                     return inner_cdec
@@ -125,17 +125,17 @@ class DecoBase:
                     @functools.wraps(cls__init__)
                     def __init__(inner_self, *args, **kwargs):
                         cls__init__(inner_self, *args, **kwargs)
-                        setattr(inner_self, inject_value, self.get(with_name))
+                        setattr(inner_self, inject_value, getattr(self, method)(with_name))
                 else:
                     @functools.wraps(cls__init__)
                     def __init__(inner_self, *args, **kwargs):
-                        setattr(inner_self, inject_value, self.get(with_name))
+                        setattr(inner_self, inject_value, getattr(self, method)(with_name))
                         cls__init__(inner_self, *args, **kwargs)
 
                 setattr(cls, '__init__', __init__)
 
             else:
-                setattr(cls, inject_value, self.get(with_name))
+                setattr(cls, inject_value, getattr(self, method)(with_name))
 
             return cls
 
@@ -190,6 +190,10 @@ class ConfigBase:
         return self
 
     def load_type(self):
+        log.warning('load_type is deprecated, use load instead')
+        return self.load()
+
+    def load(self):
         return self._load_type()
 
     def dump(self, config):
@@ -213,7 +217,7 @@ class ConfigBase:
         if not names:
             raise TypeError('names is a required argument')
 
-        current = self.load_type()
+        current = self.load()
 
         for name in names:
             current = current[name]
@@ -420,9 +424,9 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         self.write_user_config(dcp=dcp)
         return dcp
 
-    def load_type(self):
+    def load(self):
         if not hasattr(self, '_blob'):
-            self._blob = super().load_type()
+            self._blob = super().load()
 
         return self._blob
 
@@ -665,13 +669,13 @@ class UserConfig(ConfigBase):
         self = super().__new__(cls, path)
         if rename:
             self.__rename = rename
-            self.load_type = self._rename_load_type
+            self.load = self._rename_load
 
         self.static_config = static_config
         return self
 
-    def _rename_load_type(self):
-        blob = super().load_type()
+    def _rename_load(self):
+        blob = super().load()
         av = blob['auth-variables']
         log.debug(self.__rename)
         [log.debug(k) for k in av.keys()]
@@ -829,7 +833,7 @@ class UserConfig(ConfigBase):
     def alt_config(self):
         try:
             path = self._alt_config_path
-            _test = self.load_type()
+            _test = self.load()
             _test.pop('alt-config')
             rename = _test.pop('rename', None)
             if _test:

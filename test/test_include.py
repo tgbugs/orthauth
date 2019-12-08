@@ -72,7 +72,7 @@ class TestInclude(unittest.TestCase):
         auth = oa.configure(self.p1, include=(self.p2,))
         s = auth._include[0]
         dc = s.dynamic_config
-        blob = dc.load_type()
+        blob = dc.load()
         blob['auth-variables']['static-2-test-value'] = tv
         dc.dump(blob)
         test = auth.get('static-2-test-value')
