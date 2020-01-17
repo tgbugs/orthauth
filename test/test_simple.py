@@ -7,6 +7,12 @@ import orthauth as oa
 from .common import test_folder, s1, s2
 
 
+class TestDeprecations(unittest.TestCase):
+    def test_d_dynamic_config(self):
+        auth = oa.configure_relative('auth-config.py')
+        dc = auth.dynamic_config
+
+
 class TestAuthConfig(unittest.TestCase):
     def test_auth_config_in_binary_blob(self):
         auth = oa.configure_relative('auth-config.py')

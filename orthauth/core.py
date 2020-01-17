@@ -417,6 +417,15 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         return uc
 
     @property
+    def dynamic_config(self):
+        import warnings
+        cn = self.__class__.__name__
+        warnings.warn(f'{cn}.dynamic_config is deprecated please switch to {cn}.user_config',
+                      DeprecationWarning,
+                      stacklevel=2)
+        return self.user_config
+
+    @property
     def user_config_paths(self):
         return [self._pathit(path_string) for path_string in
                 self.get_blob('config-search-paths')]
