@@ -1,0 +1,8 @@
+auth-stores:  # per dynamic config only 1 source per type
+  secrets:
+    path: ../secrets/secrets-2.yaml
+auth-variables:
+  path-in-user-config: some-other-file.ext
+  paths-in-user-config: [
+    does-not-exist.ext,
+    some-other-file.ext]

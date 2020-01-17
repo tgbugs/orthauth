@@ -162,3 +162,19 @@ class TestWithStores(unittest.TestCase):
         tv = s2.parent / 'some-other-relative-path.ext'
         test = self.auth.get_path('rel-secrets-path')
         assert test == tv
+
+
+class TestPathInConfig(unittest.TestCase):
+    def setUp(self):
+        sc = test_folder / 'static-9.yaml'
+        self.auth = oa.AuthConfig(sc)
+
+    def test_path_in_user_config(self):
+        tv = test_folder / 'somewhere-else' / 'some-other-file.ext'
+        test = self.auth.get_path('path-in-user-config')
+        assert test == tv
+
+    def test_paths_in_user_config(self):
+        tv = test_folder / 'somewhere-else' / 'some-other-file.ext'
+        test = self.auth.get_path('paths-in-user-config')
+        assert test == tv

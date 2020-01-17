@@ -283,7 +283,7 @@ class ConfigBase:
         return envars
 
     @staticmethod
-    def _paths(var_config):
+    def _auth_paths(var_config):
         if 'config' in var_config:
             if [_ for _ in ('path', 'paths', 'paths-nested') if _ in var_config]:
                 raise TypeError('can only have config or path, not both')
@@ -341,7 +341,16 @@ class ConfigBase:
         return path
 
     @property
+    def _config_vars_expanded(self):
+        return {k:pathlib.Path(v).expanduser()
+                for k, v in self._config_vars.items()}
+
+    @property
     def _config_vars(self):
+        return self._static_config_vars()
+
+    @staticmethod
+    def _static_config_vars():
         """ currently supported config vars
 
             cwd
@@ -589,9 +598,15 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                 if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
+                else:
+                    dvar_config = [self.dynamic_config._pathit(p)
+                                   for p in dvar_config if p is not None]
 
                 defaults.extend(dvar_config)
             else:
+                if for_path and dvar_config is not None:
+                    dvar_config = self.dynamic_config._pathit(dvar_config)
+
                 defaults.append(dvar_config)
 
             dvar_config = {}
@@ -601,12 +616,19 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                 if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
+                else:
+                    var_config = [self._pathit(p)
+                                  for p in var_config if p is not None]
 
                 defaults.extend(var_config)
             else:
+                if for_path and var_config is not None:
+                    var_config = self._pathit(var_config)
+
                 defaults.append(var_config)
 
             var_config = {}
+
         elif 'default' in var_config:
             d = var_config['default']
             if isinstance(d, list):
@@ -616,8 +638,8 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
         envars = self._envars(dvar_config)
         envars += self._envars(var_config)
-        paths = self._paths(dvar_config)
-        paths += self._paths(var_config)
+        paths = self._auth_paths(dvar_config)
+        paths += self._auth_paths(var_config)
 
         bads = self._single_alt_configs(var_config)  # for error purposes only
         if bads:
@@ -748,7 +770,7 @@ class UserConfig(ConfigBase):
             var_config = {}
 
         envars = self._envars(var_config)
-        paths = self._paths(var_config)
+        paths = self._auth_paths(var_config)
         alt = self._single_alt_configs(var_config), variable_name, for_path
 
         if for_path:

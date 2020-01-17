@@ -1,0 +1,12 @@
+config-search-paths:
+  - somewhere-else/dynamic-9.yaml
+auth-variables:
+  path-in-user-config:
+  paths-in-user-config:
+
+# this triggers a great bug where AuthConfig
+# uses its location to expand a dynamic config
+# listed at a relative path, this was not caught
+# before because all auth and user configs were
+# in the same folder or didn't set a path in the
+# user config directly
