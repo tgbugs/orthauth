@@ -341,11 +341,6 @@ class ConfigBase:
         return path
 
     @property
-    def _config_vars_expanded(self):
-        return {k:pathlib.Path(v).expanduser()
-                for k, v in self._config_vars.items()}
-
-    @property
     def _config_vars(self):
         return self._make_config_vars()
 
@@ -384,6 +379,11 @@ class ConfigBase:
                 'user-data-path': udp,
                 'user-log-path': ulp,
         }
+
+    @staticmethod
+    def _config_vars_expanded():
+        return {k:pathlib.Path(v).expanduser()
+                for k, v in AuthConfig._make_config_vars().items()}
 
 
 class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
