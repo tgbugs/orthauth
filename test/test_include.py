@@ -5,9 +5,9 @@ from .common import test_folder
 
 
 class TestAltConfig(unittest.TestCase):
-    single = test_folder / 'static-1.yaml'
-    top = test_folder / 'static-5.yaml'
-    top_rename = test_folder / 'static-6.yaml'
+    single = test_folder / 'auth-config-1.yaml'
+    top = test_folder / 'auth-config-5.yaml'
+    top_rename = test_folder / 'auth-config-6.yaml'
     def test_single(self):
         auth = oa.configure(self.single)
         tv = 'alt config single value'
@@ -30,10 +30,10 @@ class TestAltConfig(unittest.TestCase):
         assert test == tv
 
 class TestInclude(unittest.TestCase):
-    p1 = test_folder / 'static-1.yaml'
-    p2 = test_folder / 'static-2.json'
-    p3 = test_folder / 'static-3.py'
-    p4 = test_folder / 'static-4.py'
+    p1 = test_folder / 'auth-config-1.yaml'
+    p2 = test_folder / 'auth-config-2.json'
+    p3 = test_folder / 'auth-config-3.py'
+    p4 = test_folder / 'auth-config-4.py'
 
     def tearDown(self):
         for p in (self.p2, self.p3, self.p4):
@@ -64,7 +64,7 @@ class TestInclude(unittest.TestCase):
     def test_get_included(self):
         auth = oa.configure(self.p1, include=(self.p2,))
         tv = 'ok'
-        test = auth.get('static-2-test-value')
+        test = auth.get('auth-config-2-test-value')
         assert tv == test
 
     def test_get_included_user(self):
@@ -73,7 +73,7 @@ class TestInclude(unittest.TestCase):
         s = auth._include[0]
         uc = s.user_config
         blob = uc.load()
-        blob['auth-variables']['static-2-test-value'] = tv
+        blob['auth-variables']['auth-config-2-test-value'] = tv
         uc.dump(blob)
-        test = auth.get('static-2-test-value')
+        test = auth.get('auth-config-2-test-value')
         assert tv == test

@@ -5,7 +5,7 @@ from .common import test_folder
 
 class TestDec(unittest.TestCase):
     def setUp(self):
-        sc = test_folder / 'static-1.yaml'
+        sc = test_folder / 'auth-config-1.yaml'
         self.auth = oa.AuthConfig(sc)
 
     def test_asProperty(self):
@@ -140,6 +140,6 @@ class TestDec(unittest.TestCase):
         assert Test.v2, [d for d in dir(Test) if not d.startswith('__')]
         assert not hasattr(Test, 'api_key')
 
-        assert test.v1 == 'a static value', [d for d in test.__dict__ if not d.startswith('__')]
+        assert test.v1 == 'a auth-config value', [d for d in test.__dict__ if not d.startswith('__')]
         assert test.v2 == 'a user value', [d for d in test.__dict__ if not d.startswith('__')]
         assert test.api_key == 'tiapi'

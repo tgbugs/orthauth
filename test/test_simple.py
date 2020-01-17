@@ -16,7 +16,7 @@ class TestAuthConfig(unittest.TestCase):
 
     def test_bad_alt_config(self):
         try:
-            auth = oa.configure(test_folder / 'static-bad-alt-config.yaml')
+            auth = oa.configure(test_folder / 'auth-config-bad-alt-config.yaml')
             auth.get('test')
             raise AssertionError('should have failed')
         except oa.exceptions.BadAuthConfigFormatError:
@@ -25,16 +25,16 @@ class TestAuthConfig(unittest.TestCase):
 
 class TestConfigure(unittest.TestCase):
     def setUp(self):
-        with open(test_folder / 'static-1.yaml', 'rt') as f:
+        with open(test_folder / 'auth-config-1.yaml', 'rt') as f:
             self.tv = yaml.safe_load(f)
 
     def test_configure(self):
-        auth = oa.configure(test_folder / 'static-1.yaml')
+        auth = oa.configure(test_folder / 'auth-config-1.yaml')
         test = auth.load()
         assert test == self.tv
 
     def test_configure_relative(self):
-        auth = oa.configure_relative('static-0.yaml')
+        auth = oa.configure_relative('auth-config-0.yaml')
         test = auth.load()
         tv = {'config-search-paths': ['configs/user-1.yaml'],
               'auth-variables': {'default-example': None}}
@@ -43,7 +43,7 @@ class TestConfigure(unittest.TestCase):
 
 class TestSimple(unittest.TestCase):
     def setUp(self):
-        sc = test_folder / 'static-1.yaml'
+        sc = test_folder / 'auth-config-1.yaml'
         self.auth = oa.AuthConfig(sc)
 
     def test_null_path(self):
@@ -123,7 +123,7 @@ class TestSimple(unittest.TestCase):
 
 class TestMakeUserConfig(unittest.TestCase):
     def setUp(self):
-        sc = test_folder / 'static-1.yaml'
+        sc = test_folder / 'auth-config-1.yaml'
         self.auth = oa.AuthConfig(sc)
 
     def test_exists(self):
@@ -155,7 +155,7 @@ class TestMakeUserConfig(unittest.TestCase):
 
 class TestWithStores(unittest.TestCase):
     def setUp(self):
-        sc = test_folder / 'static-8.yaml'
+        sc = test_folder / 'auth-config-8.yaml'
         self.auth = oa.AuthConfig(sc)
 
     def test_path_relative_store(self):
@@ -166,7 +166,7 @@ class TestWithStores(unittest.TestCase):
 
 class TestPathInConfig(unittest.TestCase):
     def setUp(self):
-        sc = test_folder / 'static-9.yaml'
+        sc = test_folder / 'auth-config-9.yaml'
         self.auth = oa.AuthConfig(sc)
 
     def test_path_in_user_config(self):

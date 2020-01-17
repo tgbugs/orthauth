@@ -16,13 +16,13 @@ class TestFormats(unittest.TestCase):
         assert SECRET == 'oh-no-my-api-key-is-on-github-!', 'derp'
 
     def test_yaml(self):
-        auth = self._config('static-1.yaml')
+        auth = self._config('auth-config-1.yaml')
         self._do_test(auth)
 
     def test_python(self):
-        path = test_folder / 'static-1.py'
+        path = test_folder / 'auth-config-1.py'
         try:
-            with open(test_folder / 'static-1.yaml', 'rt') as f, open(path, 'wt') as o:
+            with open(test_folder / 'auth-config-1.yaml', 'rt') as f, open(path, 'wt') as o:
                 d = yaml.safe_load(f)
                 o.write(pprint.pformat(d))
 
@@ -34,9 +34,9 @@ class TestFormats(unittest.TestCase):
                 path.unlink()
 
     def test_json(self):
-        path = test_folder / 'static-1.json'
+        path = test_folder / 'auth-config-1.json'
         try:
-            with open(test_folder / 'static-1.yaml', 'rt') as f, open(path, 'wt') as o:
+            with open(test_folder / 'auth-config-1.yaml', 'rt') as f, open(path, 'wt') as o:
                 d = yaml.safe_load(f)
                 json.dump(d, o)
 

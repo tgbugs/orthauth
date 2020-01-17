@@ -347,10 +347,10 @@ class ConfigBase:
 
     @property
     def _config_vars(self):
-        return self._static_config_vars()
+        return self._make_config_vars()
 
     @staticmethod
-    def _static_config_vars():
+    def _make_config_vars():
         """ currently supported config vars
 
             cwd
@@ -643,7 +643,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
         bads = self._single_alt_configs(var_config)  # for error purposes only
         if bads:
-            msg = ('static configs should never define single atl configs\n'
+            msg = ('auth-configs should never define single atl configs\n'
                    f'{bads} in {self._path}')
             raise exc.BadAuthConfigFormatError(msg)
 
@@ -678,7 +678,7 @@ class UserConfig(ConfigBase):
 
     There is a strong possibility that this will only be a single
     level without any trees to simplify the interaction between
-    the Static and Dynamic configs
+    the Auth and User configs
 
     WARNING: if you use this to set authentication endpoints
     then make sure a malicious party cannot change the endpoint
@@ -686,14 +686,14 @@ class UserConfig(ConfigBase):
     """
 
     @classmethod
-    def _from_user_alt_config(cls, path, static_config, rename=None):
+    def _from_user_alt_config(cls, path, auth_config, rename=None):
         # TODO rename
         self = super().__new__(cls, path)
         if rename:
             self.__rename = rename
             self.load = self._rename_load
 
-        self.static_config = static_config
+        self.auth_config = auth_config
         return self
 
     def _rename_load(self):
@@ -708,10 +708,10 @@ class UserConfig(ConfigBase):
         [log.debug(k) for k in av.keys()]
         return blob
 
-    def __new__(cls, static_config):
-        path = static_config.user_config_path
+    def __new__(cls, auth_config):
+        path = auth_config.user_config_path
         self = super().__new__(cls, path)
-        self.static_config = static_config
+        self.auth_config = auth_config
         return self
 
     def _auth_store(self, type_):
@@ -832,7 +832,7 @@ class UserConfig(ConfigBase):
             if rename is not None:
                 variable = rename
 
-            auc = self._from_user_alt_config(path, self.static_config)
+            auc = self._from_user_alt_config(path, self.auth_config)
             return auc.get(variable, for_path=for_path)
 
     @property
@@ -862,7 +862,7 @@ class UserConfig(ConfigBase):
                 raise ValueError('configs with top level alt-config may '
                                  f'have only a rename section\n{_test}')
 
-            return self._from_user_alt_config(path, self.static_config, rename)
+            return self._from_user_alt_config(path, self.auth_config, rename)
         except KeyError:
             pass
 
