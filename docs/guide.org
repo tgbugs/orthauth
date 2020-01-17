@@ -13,8 +13,8 @@ using the variables install a user config with only the variables you
 need to add. This allows development to continue as if upstream already
 provided them, and prevents having to make other changes in the future.
 * Example
-See [[file:../test/configs/static-1.yaml]] (auth config)
-and [[file:../test/configs/dynamic-1.yaml]] (user config)
+See [[file:../test/configs/auth-config-1.yaml]] (auth config)
+and [[file:../test/configs/user-1.yaml]] (user config)
 for more examples with some explanatory comments.
 ** Config files
 An example =auth-config.yaml= file. The content of the auth config
