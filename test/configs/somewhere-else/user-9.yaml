@@ -1,4 +1,4 @@
-auth-stores:  # per dynamic config only 1 source per type
+auth-stores:
   secrets:
     path: ../secrets/secrets-2.yaml
 auth-variables:
