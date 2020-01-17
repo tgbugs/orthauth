@@ -1,4 +1,4 @@
 config-search-paths:
-  - configs/dynamic-1.yaml
+  - configs/user-1.yaml
 auth-variables:
   default-example:

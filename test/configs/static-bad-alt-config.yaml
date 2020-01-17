@@ -1,5 +1,5 @@
 config-search-paths:
-  - dynamic-1.yaml
+  - user-1.yaml
 auth-variables:
   test:
-    config: dynamic-6.yaml
+    config: user-6.yaml

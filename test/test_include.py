@@ -38,11 +38,11 @@ class TestInclude(unittest.TestCase):
     def tearDown(self):
         for p in (self.p2, self.p3, self.p4):
             a = oa.configure(p)
-            dcp = a.dynamic_config._path
-            if dcp.parent != p.parent:
-                shutil.rmtree(p.parent / dcp.relative_to(p.parent).parts[0])
+            ucp = a.user_config._path
+            if ucp.parent != p.parent:
+                shutil.rmtree(p.parent / ucp.relative_to(p.parent).parts[0])
             else:
-                dcp.unlink()
+                ucp.unlink()
 
     def test_include(self):
         oa.configure(self.p1, include=(self.p2,))
@@ -71,9 +71,9 @@ class TestInclude(unittest.TestCase):
         tv = 'super duper'
         auth = oa.configure(self.p1, include=(self.p2,))
         s = auth._include[0]
-        dc = s.dynamic_config
-        blob = dc.load()
+        uc = s.user_config
+        blob = uc.load()
         blob['auth-variables']['static-2-test-value'] = tv
-        dc.dump(blob)
+        uc.dump(blob)
         test = auth.get('static-2-test-value')
         assert tv == test

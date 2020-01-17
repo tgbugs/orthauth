@@ -1,12 +1,12 @@
 config-search-paths:  # search ends when the first path is found
-  - dynamic-1.yaml
+  - user-1.yaml
   - '{:user-config-path}/program-name/config.yaml'
   - /etc/program-name/config.{py,yaml,json,sxml,rkt,lisp,json,xml}
 default-paths:  # suggested locations for default paths when generating a blank user config
   secrets: '{:user-config-path}/program-name/secrets.yaml'
   config: '{:user-config-path}/program-name/config.yaml'
 auth-variables:  # insecure static variables
-  # a dynamic configs + auth store combination should always
+  # a user configs + auth store combination should always
   # be able to return a value for each of these
   test-config-vars: [ # multiple paths provided as a default value are searched in order
                       # until an existing path is found if no path is found then the first

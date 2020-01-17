@@ -1,9 +1,9 @@
-auth-stores:  # per dynamic config only 1 source per type
+auth-stores:  # per user config only 1 source per type
   # list in order of precedence ??
   secrets:
     path: secrets-test-1.yaml # relative paths start from the location of the
                               # defining configuration file (e.g. in this case the folder
-                              # containing this dynamic-1.yaml file)
+                              # containing this user-1.yaml file)
     # path: '{:user-config-path}/orthauth/secrets.yaml'  # default ...
   authinfo:
     path: ~/.authinfo
@@ -22,9 +22,9 @@ auth-variables:
   test-config-vars: [
     '{:prefix}/share/orthauth/.does-not-exist']
   test-alt-config-single:
-    config: dynamic-6.yaml
+    config: user-6.yaml
   test-alt-config-single-rename:
-    config: dynamic-6.yaml
+    config: user-6.yaml
     rename: under-a-different-name
   test-top-level-alt-config: alt config top value
   test-top-level-alt-config-rename: alt config top rename value
@@ -60,7 +60,7 @@ auth-variables:
   # maybe that is a mistake ? maybe we can do `name = auth.register('SheetName')`
   # and the user can add their own entries ? I don't entirely like that ...
   heading-example:  # this one is going to take a little more thinking
-    dynamic-variables: sheet-name
+    user-variables: sheet-name
 
   paths-as-list-example:
     paths:
@@ -72,10 +72,10 @@ auth-variables:
     path: api at-init
   test-after-init: after-init
   test-tang-init: tiapi  # don't do this irl please
-  test-value-2: a dynamic value
+  test-value-2: a user value
   test-multi-path-2: [
     'also/does/not/exist.path',
-    'dynamic-1.yaml']
+    'user-1.yaml']
   test-multi-path-3: [
     'path/does/not/exist/file.ext',
-    'dynamic-1.yaml']
+    'user-1.yaml']

@@ -141,5 +141,5 @@ class TestDec(unittest.TestCase):
         assert not hasattr(Test, 'api_key')
 
         assert test.v1 == 'a static value', [d for d in test.__dict__ if not d.startswith('__')]
-        assert test.v2 == 'a dynamic value', [d for d in test.__dict__ if not d.startswith('__')]
+        assert test.v2 == 'a user value', [d for d in test.__dict__ if not d.startswith('__')]
         assert test.api_key == 'tiapi'
