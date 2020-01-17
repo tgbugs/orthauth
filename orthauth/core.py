@@ -399,39 +399,39 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
     def _from_relative_path(cls, calling__file__, name, include=tuple(), calling_module=None):
         self = super().__new__(cls, pathlib.Path(calling__file__).parent / name, include=include)
         self._calling_module = calling_module
-        self._dynamic_config = UserConfig(self)
+        self._user_config = UserConfig(self)
         return self
 
     def __new__(cls, path, include=tuple()):
         self = super().__new__(cls, path, include=include)
-        self._dynamic_config = UserConfig(self)
+        self._user_config = UserConfig(self)
         return self
 
     @property
-    def dynamic_config(self):
-        dc = self._dynamic_config
-        ac = dc.alt_config
+    def user_config(self):
+        uc = self._user_config
+        ac = uc.alt_config
         if ac:
-            dc = ac
+            uc = ac
         
-        return dc
+        return uc
 
     @property
-    def dynamic_config_paths(self):
+    def user_config_paths(self):
         return [self._pathit(path_string) for path_string in
                 self.get_blob('config-search-paths')]
 
     @property
-    def dynamic_config_path(self):
-        dcps = self.dynamic_config_paths
-        for path in dcps:
+    def user_config_path(self):
+        ucps = self.user_config_paths
+        for path in ucps:
             if path.exists():
                 return path
 
         # if no config exists automatically create the default
-        dcp = dcps[0]  # you MUST have a user config path
-        self.write_user_config(dcp=dcp)
-        return dcp
+        ucp = ucps[0]  # you MUST have a user config path
+        self.write_user_config(ucp=ucp)
+        return ucp
 
     def load(self):
         if not hasattr(self, '_blob'):
@@ -454,36 +454,36 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         # error on unexpected keys to prevent forgetting variables:
         raise NotImplementedError
 
-    def _make_dynamic(self):
+    def _make_user(self):
         return {'auth-stores': {'secrets': {'path': '{:user-config-path}/orthauth/secrets.yaml'}},
                 'auth-variables': {var:None for var in self.get_blob('auth-variables')}}
 
     def _serialize_user_config(self, format):
-        config = self._make_dynamic()
+        config = self._make_user()
         return self._dump(config, format)
 
-    def write_user_config(self, *, format=None, dcp=None):
+    def write_user_config(self, *, format=None, ucp=None):
         # NOTE user config cannot write itself
-        dcps = self.dynamic_config_paths
-        for _d in dcps:  # if any config already exists exit
-            if _d.exists():
-                raise exc.ConfigExistsError('{_d}')
+        ucps = self.user_config_paths
+        for _u in ucps:  # if any config already exists exit
+            if _u.exists():
+                raise exc.ConfigExistsError('{_u}')
 
-        if dcp is None:
-            dcp = self.dynamic_config_path
+        if ucp is None:
+            ucp = self.user_config_path
 
         if format is not None:
-            dcp = dcp.with_suffix('.' + format)
-            if dcp not in dcps:
+            ucp = ucp.with_suffix('.' + format)
+            if ucp not in ucps:
                 # FIXME we do need to support .* or {yaml,py,lisp,json}
-                raise TypeError(f'{dcp} not one of the expected formats {dcps}')
+                raise TypeError(f'{ucp} not one of the expected formats {ucps}')
         else:
-            format = dcp.suffix.strip('.')
+            format = ucp.suffix.strip('.')
 
-        if not dcp.parent.exists():
-            dcp.parent.mkdir(parents=True)
+        if not ucp.parent.exists():
+            ucp.parent.mkdir(parents=True)
 
-        with open(dcp, 'wt') as f:
+        with open(ucp, 'wt') as f:
             f.write(self._serialize_user_config(format))
 
     def get_path(self, variable_name):
@@ -572,7 +572,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                     raise error
 
         try:
-            dvar_config = self.dynamic_config.get_blob('auth-variables', variable_name)
+            dvar_config = self.user_config.get_blob('auth-variables', variable_name)
             if dvar_config is None:
                 dvar_config = {}
                 f1 = True
@@ -599,13 +599,13 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
                 else:
-                    dvar_config = [self.dynamic_config._pathit(p)
+                    dvar_config = [self.user_config._pathit(p)
                                    for p in dvar_config if p is not None]
 
                 defaults.extend(dvar_config)
             else:
                 if for_path and dvar_config is not None:
-                    dvar_config = self.dynamic_config._pathit(dvar_config)
+                    dvar_config = self.user_config._pathit(dvar_config)
 
                 defaults.append(dvar_config)
 
@@ -650,11 +650,11 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         alt = self._single_alt_configs(dvar_config), variable_name, for_path
 
         if for_path:
-            get_dc = self.dynamic_config._get_path
+            get_uc = self.user_config._get_path
             def get_default(d):
                 return d
         else:
-            get_dc = self.dynamic_config._get
+            get_uc = self.user_config._get
             def get_default(d):
                 if len(d) == 1 and d[0] is None:
                     return
@@ -662,8 +662,8 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                     return str(d[0])
 
         for f, v in zip((getenv,
-                         get_dc,
-                         self.dynamic_config._gsac_wrap,
+                         get_uc,
+                         self.user_config._gsac_wrap,
                          get_default),
                         (envars, paths, alt, defaults)):
             if v:
@@ -686,7 +686,7 @@ class UserConfig(ConfigBase):
     """
 
     @classmethod
-    def _from_dynamic_alt_config(cls, path, static_config, rename=None):
+    def _from_user_alt_config(cls, path, static_config, rename=None):
         # TODO rename
         self = super().__new__(cls, path)
         if rename:
@@ -709,7 +709,7 @@ class UserConfig(ConfigBase):
         return blob
 
     def __new__(cls, static_config):
-        path = static_config.dynamic_config_path
+        path = static_config.user_config_path
         self = super().__new__(cls, path)
         self.static_config = static_config
         return self
@@ -832,8 +832,8 @@ class UserConfig(ConfigBase):
             if rename is not None:
                 variable = rename
 
-            adc = self._from_dynamic_alt_config(path, self.static_config)
-            return adc.get(variable, for_path=for_path)
+            auc = self._from_user_alt_config(path, self.static_config)
+            return auc.get(variable, for_path=for_path)
 
     @property
     def _alt_config_path(self):
@@ -862,7 +862,7 @@ class UserConfig(ConfigBase):
                 raise ValueError('configs with top level alt-config may '
                                  f'have only a rename section\n{_test}')
 
-            return self._from_dynamic_alt_config(path, self.static_config, rename)
+            return self._from_user_alt_config(path, self.static_config, rename)
         except KeyError:
             pass
 
