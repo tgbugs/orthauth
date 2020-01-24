@@ -121,6 +121,7 @@ class DecoBase:
 
             elif atInit:
                 cls__init__ = cls.__init__
+                cls._cls__init__ = cls__init__  # TODO do need this even if we are forced to subclass :/ sigh, yeah, if you need multiple per ... the decorator has to return a different class, and it cant decorate
                 if atInit == 'after':
                     @functools.wraps(cls__init__)
                     def __init__(inner_self, *args, **kwargs):
