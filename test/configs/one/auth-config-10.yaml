@@ -1,4 +1,6 @@
 config-search-paths:
   - ../user-10.yaml
 auth-variables:
-  test-include-relative-path: ../..
+  test-include-relative-path:
+    default: ../..
+    environment-variables: HELLO THERE
