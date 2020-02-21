@@ -1,0 +1,4 @@
+config-search-paths:
+  - ../user-11.yaml
+auth-variables:
+  another-variable

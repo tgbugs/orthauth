@@ -181,6 +181,9 @@ class ConfigBase:
                 bads |= set(k for k in av if k in others) | set(k for k in others if k in av)
 
             if bads:
+                # FIXME because the path variables are not expanded before being compared
+                # this can cause false positives, where '../here' appearing twice when the
+                # included configs start in different locations
                 raise exc.VariableCollisionError(f'{bads}')
 
             self._include = tuple(inc)

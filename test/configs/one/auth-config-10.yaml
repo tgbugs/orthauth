@@ -1,0 +1,4 @@
+config-search-paths:
+  - ../user-10.yaml
+auth-variables:
+  test-include-relative-path: ../..

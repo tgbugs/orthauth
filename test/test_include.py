@@ -1,5 +1,7 @@
+import os
 import shutil
 import unittest
+import pytest
 import orthauth as oa
 from .common import test_folder
 
@@ -29,11 +31,14 @@ class TestAltConfig(unittest.TestCase):
         test = auth.get('name-that-would-collide-or-something')
         assert test == tv
 
+
 class TestInclude(unittest.TestCase):
     p1 = test_folder / 'auth-config-1.yaml'
     p2 = test_folder / 'auth-config-2.json'
     p3 = test_folder / 'auth-config-3.py'
     p4 = test_folder / 'auth-config-4.py'
+    p5 = test_folder / 'one' / 'auth-config-10.yaml'
+    p6 = test_folder / 'two/three' / 'auth-config-11.yaml'
 
     def tearDown(self):
         for p in (self.p2, self.p3, self.p4):
@@ -77,3 +82,41 @@ class TestInclude(unittest.TestCase):
         uc.dump(blob)
         test = auth.get('auth-config-2-test-value')
         assert tv == test
+
+    def test_included_relative_path(self):
+        p5c = oa.configure(self.p5)
+        p6c = oa.configure(self.p6, include=(self.p5,))
+
+        test_av = 'test-include-relative-path'
+
+        value_p5 = p5c.get_path(test_av)
+        value_p6 = p6c.get_path(test_av)
+        assert value_p5 == value_p6
+
+    def test_included_relative_path_relative(self):
+        p5r = self.p5.relative_to(test_folder.parent).as_posix()
+        print(p5r)
+        p5c = oa.configure_relative(p5r)
+
+        p6r = self.p6.relative_to(test_folder.parent).as_posix()
+        print(p6r)
+        p6c = oa.configure_relative(p6r, include=p5c)
+
+        test_av = 'test-include-relative-path'
+
+        value_p5 = p5c.get_path(test_av)
+        value_p6 = p6c.get_path(test_av)
+        assert value_p5 == value_p6
+
+    @pytest.mark.skipif('CI' in os.environ, reason='CI will not have these files')
+    def test_included_relative_path_wat(self):
+        """ Why the heck does this fail when the test cases above don't !?"""
+        from pathlib import Path
+        p5 = Path('/home/tom/git/pyontutils/pyontutils/auth-config.py')
+        p6 = Path('/home/tom/git/pyontutils/neurondm/neurondm/auth-config.py')
+        p5c = oa.configure(p5)
+        p6c = oa.configure(p6, include=(p5,))
+        test_av = 'ontology-local-repo'
+        value_p5 = p5c.get_path(test_av)
+        value_p6 = p6c.get_path(test_av)
+        assert value_p5 == value_p6
