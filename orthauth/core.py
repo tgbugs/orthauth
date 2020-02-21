@@ -624,6 +624,15 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
             dvar_config = {}
 
+        # there is a limited use case for allowing users to set a value, if they also
+        # want to define custom user set environment variables
+        elif 'default' in dvar_config:
+            d = dvar_config['default']
+            if isinstance(d, list):
+                defaults.extend(d)
+            else:
+                defaults.append(d)
+
         if not isinstance(var_config, dict):
             if isinstance(var_config, list):
                 if not for_path:
