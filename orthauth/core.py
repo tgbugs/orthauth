@@ -631,8 +631,18 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         elif 'default' in user_variable_value:
             d = user_variable_value['default']
             if isinstance(d, list):
+                if not for_path:
+                    log.warning(f'attempting to get a default value for {variable_name} '
+                                'that is a list did you want get_path?')
+                else:
+                    d = [self.user_config._pathit(p) for p in d if p is not None]
+
                 defaults.extend(d)
+
             else:
+                if for_path and d is not None:
+                    d = self.user_config._pathit(d)
+
                 defaults.append(d)
 
         if not isinstance(auth_variable_value, dict):
@@ -656,8 +666,18 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         elif 'default' in auth_variable_value:
             d = auth_variable_value['default']
             if isinstance(d, list):
+                if not for_path:
+                    log.warning(f'attempting to get a default value for {variable_name} '
+                                'that is a list did you want get_path?')
+                else:
+                    d = [self._pathit(p) for p in d if p is not None]
+
                 defaults.extend(d)
+
             else:
+                if for_path and d is not None:
+                    d = self._pathit(d)
+
                 defaults.append(d)
 
         envars = self._envars(user_variable_value)
