@@ -92,3 +92,21 @@ class TestInclude(unittest.TestCase):
         value_p5 = p5c.get_path(test_av)
         value_p6 = p6c.get_path(test_av)
         assert value_p5 == value_p6
+
+    def test_included_relative_path_default(self):
+        p5c = oa.configure(self.p5)
+        p6c = oa.configure(self.p6, include=(self.p5,))
+        test_av = 'test-include-relative-path-default'
+
+        value_p5 = p5c.get_path(test_av)
+        value_p6 = p6c.get_path(test_av)
+        assert value_p5 == value_p6
+
+    def test_included_relative_path_envars(self):
+        p5c = oa.configure(self.p5)
+        p6c = oa.configure(self.p6, include=(self.p5,))
+        test_av = 'test-include-relative-path-envars'
+
+        value_p5 = p5c.get_path(test_av)
+        value_p6 = p6c.get_path(test_av)
+        assert value_p5 == value_p6
