@@ -271,12 +271,12 @@ class ConfigBase:
                 raise ModuleNotFoundError(msg) from e
 
     @staticmethod
-    def _envars(var_config):
+    def _envars(auth_variable_value):
         envars = []
         # env
         for evkey in ('environment-variables', 'env-vars', 'envars'):
-            if evkey in var_config:
-                ev = var_config[evkey]
+            if evkey in auth_variable_value:
+                ev = auth_variable_value[evkey]
                 if isinstance(ev, str):
                     envars += ev.split(' ')
                 elif isinstance(ev, list):
@@ -287,23 +287,23 @@ class ConfigBase:
         return envars
 
     @staticmethod
-    def _auth_paths(var_config):
-        if 'config' in var_config:
-            if [_ for _ in ('path', 'paths', 'paths-nested') if _ in var_config]:
+    def _auth_paths(auth_variable_value):
+        if 'config' in auth_variable_value:
+            if [_ for _ in ('path', 'paths', 'paths-nested') if _ in auth_variable_value]:
                 raise TypeError('can only have config or path, not both')
 
             return []
 
         raw_paths = []
         # paths
-        if 'path' in var_config:
-            raw_paths += [var_config['path']]
+        if 'path' in auth_variable_value:
+            raw_paths += [auth_variable_value['path']]
 
-        if 'paths' in var_config:
-            raw_paths += var_config['paths']
+        if 'paths' in auth_variable_value:
+            raw_paths += auth_variable_value['paths']
 
-        if 'paths-nested' in var_config:
-            raw_paths += list(branches(var_config['paths-nested']))
+        if 'paths-nested' in auth_variable_value:
+            raw_paths += list(branches(auth_variable_value['paths-nested']))
 
         try:
             paths = list(parse_paths(raw_paths))
@@ -313,12 +313,12 @@ class ConfigBase:
         return paths
 
     @staticmethod
-    def _single_alt_configs(var_config):
-        if 'config' in var_config:
-            if 'path' in var_config:
+    def _single_alt_configs(auth_variable_value):
+        if 'config' in auth_variable_value:
+            if 'path' in auth_variable_value:
                 raise TypeError('can only have config or path, not both')
 
-            return var_config
+            return auth_variable_value
 
     def _pathit(self, path_string):
         return self._pathit_relative(self._path.parent, path_string)
@@ -502,6 +502,8 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
         var = self.get(variable_name, for_path=True)
+        # NOTE: right now if default is explicit for path comes back as a string
+        # whereas a implicit default comes back as a Path already
         if var == [None]:
             return
 
@@ -540,22 +542,22 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
     def get_default(self, variable_name, *args, **kwargs):
         av = self.get_blob('auth-variables')
-        var_config = av[variable_name]
+        auth_variable_value = av[variable_name]
 
         defaults = []
-        if not isinstance(var_config, dict):
-            if isinstance(var_config, list):
+        if not isinstance(auth_variable_value, dict):
+            if isinstance(auth_variable_value, list):
                 if ('for_path' not in kwargs or not kwargs['for_path']):
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
 
-                defaults.extend(var_config)
+                defaults.extend(auth_variable_value)
             else:
-                defaults.append(var_config)
+                defaults.append(auth_variable_value)
 
-            var_config = {}
-        elif 'default' in var_config:
-            d = var_config['default']
+            auth_variable_value = {}
+        elif 'default' in auth_variable_value:
+            d = auth_variable_value['default']
             if isinstance(d, list):
                 defaults.extend(d)
             else:
@@ -585,91 +587,91 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                     raise error
 
         try:
-            dvar_config = self.user_config.get_blob('auth-variables', variable_name)
-            if dvar_config is None:
-                dvar_config = {}
+            user_variable_value = self.user_config.get_blob('auth-variables', variable_name)
+            if user_variable_value is None:
+                user_variable_value = {}
                 f1 = True
             else:
                 f1 = False
         except KeyError as e:
-            dvar_config = {}
+            user_variable_value = {}
             f1 = e
 
         try:
-            var_config = av[variable_name]
+            auth_variable_value = av[variable_name]
             f2 = False
         except KeyError as e:
-            var_config = {}
+            auth_variable_value = {}
             f2 = e
 
         if f1 and f2:
             raise f2 from f1
 
         defaults = []
-        if not isinstance(dvar_config, dict):
-            if isinstance(dvar_config, list):
+        if not isinstance(user_variable_value, dict):
+            if isinstance(user_variable_value, list):
                 if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
                 else:
-                    dvar_config = [self.user_config._pathit(p)
-                                   for p in dvar_config if p is not None]
+                    user_variable_value = [self.user_config._pathit(p)
+                                   for p in user_variable_value if p is not None]
 
-                defaults.extend(dvar_config)
+                defaults.extend(user_variable_value)
             else:
-                if for_path and dvar_config is not None:
-                    dvar_config = self.user_config._pathit(dvar_config)
+                if for_path and user_variable_value is not None:
+                    user_variable_value = self.user_config._pathit(user_variable_value)
 
-                defaults.append(dvar_config)
+                defaults.append(user_variable_value)
 
-            dvar_config = {}
+            user_variable_value = {}
 
         # there is a limited use case for allowing users to set a value, if they also
         # want to define custom user set environment variables
-        elif 'default' in dvar_config:
-            d = dvar_config['default']
+        elif 'default' in user_variable_value:
+            d = user_variable_value['default']
             if isinstance(d, list):
                 defaults.extend(d)
             else:
                 defaults.append(d)
 
-        if not isinstance(var_config, dict):
-            if isinstance(var_config, list):
+        if not isinstance(auth_variable_value, dict):
+            if isinstance(auth_variable_value, list):
                 if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
                 else:
-                    var_config = [self._pathit(p)
-                                  for p in var_config if p is not None]
+                    auth_variable_value = [self._pathit(p)
+                                  for p in auth_variable_value if p is not None]
 
-                defaults.extend(var_config)
+                defaults.extend(auth_variable_value)
             else:
-                if for_path and var_config is not None:
-                    var_config = self._pathit(var_config)
+                if for_path and auth_variable_value is not None:
+                    auth_variable_value = self._pathit(auth_variable_value)
 
-                defaults.append(var_config)
+                defaults.append(auth_variable_value)
 
-            var_config = {}
+            auth_variable_value = {}
 
-        elif 'default' in var_config:
-            d = var_config['default']
+        elif 'default' in auth_variable_value:
+            d = auth_variable_value['default']
             if isinstance(d, list):
                 defaults.extend(d)
             else:
                 defaults.append(d)
 
-        envars = self._envars(dvar_config)
-        envars += self._envars(var_config)
-        paths = self._auth_paths(dvar_config)
-        paths += self._auth_paths(var_config)
+        envars = self._envars(user_variable_value)
+        envars += self._envars(auth_variable_value)
+        paths = self._auth_paths(user_variable_value)
+        paths += self._auth_paths(auth_variable_value)
 
-        bads = self._single_alt_configs(var_config)  # for error purposes only
+        bads = self._single_alt_configs(auth_variable_value)  # for error purposes only
         if bads:
             msg = ('auth-configs should never define single atl configs\n'
                    f'{bads} in {self._path}')
             raise exc.BadAuthConfigFormatError(msg)
 
-        alt = self._single_alt_configs(dvar_config), variable_name, for_path
+        alt = self._single_alt_configs(user_variable_value), variable_name, for_path
 
         if for_path:
             get_uc = self.user_config._get_path
@@ -774,26 +776,26 @@ class UserConfig(ConfigBase):
         """ look up the value of a variable name from auth store or config """
         # ah the problem of interleveing values from sources of different rank ...
         for_path = 'for_path' in kwargs and kwargs['for_path']
-        var_config = self.get_blob('auth-variables', variable_name)
-        if var_config is None:
+        auth_variable_value = self.get_blob('auth-variables', variable_name)
+        if auth_variable_value is None:
             raise KeyError(variable_name)
 
         defaults = []
-        if not isinstance(var_config, dict):
-            if isinstance(var_config, list):
+        if not isinstance(auth_variable_value, dict):
+            if isinstance(auth_variable_value, list):
                 if not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
 
-                defaults.extend(var_config)
+                defaults.extend(auth_variable_value)
             else:
-                defaults.append(var_config)
+                defaults.append(auth_variable_value)
 
-            var_config = {}
+            auth_variable_value = {}
 
-        envars = self._envars(var_config)
-        paths = self._auth_paths(var_config)
-        alt = self._single_alt_configs(var_config), variable_name, for_path
+        envars = self._envars(auth_variable_value)
+        paths = self._auth_paths(auth_variable_value)
+        alt = self._single_alt_configs(auth_variable_value), variable_name, for_path
 
         if for_path:
             def get_default(d):
