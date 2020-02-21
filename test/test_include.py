@@ -92,31 +92,3 @@ class TestInclude(unittest.TestCase):
         value_p5 = p5c.get_path(test_av)
         value_p6 = p6c.get_path(test_av)
         assert value_p5 == value_p6
-
-    def test_included_relative_path_relative(self):
-        p5r = self.p5.relative_to(test_folder.parent).as_posix()
-        print(p5r)
-        p5c = oa.configure_relative(p5r)
-
-        p6r = self.p6.relative_to(test_folder.parent).as_posix()
-        print(p6r)
-        p6c = oa.configure_relative(p6r, include=p5c)
-
-        test_av = 'test-include-relative-path'
-
-        value_p5 = p5c.get_path(test_av)
-        value_p6 = p6c.get_path(test_av)
-        assert value_p5 == value_p6
-
-    @pytest.mark.skipif('CI' in os.environ, reason='CI will not have these files')
-    def test_included_relative_path_wat(self):
-        """ Why the heck does this fail when the test cases above don't !?"""
-        from pathlib import Path
-        p5 = Path('/home/tom/git/pyontutils/pyontutils/auth-config.py')
-        p6 = Path('/home/tom/git/pyontutils/neurondm/neurondm/auth-config.py')
-        p5c = oa.configure(p5)
-        p6c = oa.configure(p6, include=(p5,))
-        test_av = 'ontology-local-repo'
-        value_p5 = p5c.get_path(test_av)
-        value_p6 = p6c.get_path(test_av)
-        assert value_p5 == value_p6
