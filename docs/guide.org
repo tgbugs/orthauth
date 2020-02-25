@@ -1,17 +1,10 @@
 #+TITLE: orthauth user guide
+#+options: num:nil ^:nil
 
 * Basic principles
 1. Values from a user config take priority over values from the static auth config.
 2. Environment variables take priority over any default variable or any variable from
    an auth store path.
-* Workflows
-I have a problem and I want to do X
-** A package I use doesn't set environment variables for a value
-Add the environment variables to your user config and ask the maintainer
-to add some in the next version. In the mean time if you need to test
-using the variables install a user config with only the variables you
-need to add. This allows development to continue as if upstream already
-provided them, and prevents having to make other changes in the future.
 * Example
 See [[file:../test/configs/auth-config-1.yaml]] (auth config)
 and [[file:../test/configs/user-1.yaml]] (user config)
@@ -81,3 +74,11 @@ class MyClassThatMakesApiCalls:
 instance = MyClassThatMakesApiCalls()
 instance.leak_api_key()
 #+end_src
+* Workflows
+I have a problem and I want to do X
+** A package I use doesn't set environment variables for a value
+Add the environment variables to your user config and ask the maintainer
+to add some in the next version. In the mean time if you need to test
+using the variables install a user config with only the variables you
+need to add. This allows development to continue as if upstream already
+provided them, and prevents having to make other changes in the future.
