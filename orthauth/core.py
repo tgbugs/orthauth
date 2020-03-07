@@ -196,16 +196,14 @@ class ConfigBase:
 
         return self
 
-    def runtimeConfig(self, *blobs):
-        # each child class must implement its own way of populating children
-        # NOTE runtime configs WILL fail if they contain relative paths
-        if self._path is not None:
-            raise TypeError('self._path is not None, cannot overwrite config at runtime')
-
+    @classmethod
+    def runtimeConfig(cls, blob):
+        # FIXME pretty sure __init__ is not running here
+        self = ConfigBase.__new__(cls, None)
         #self._path = None  # FIXME vs
         # /dev/null/this/path/does/not/exist/but/you/could/escape/with/enough/..
-        blob, *blos
         self._runtime_config = blob
+        return self  # NOTE init is complete if runtimeConfig is not implemented on the subclass
 
     def load_type(self):
         cn = self.__class__.__name__
@@ -341,9 +339,9 @@ class ConfigBase:
             return auth_variable_value
 
     def _pathit(self, path_string):
-        return self._pathit_relative(self._path.parent, path_string)
+        return self._pathit_relative(self._path, path_string)
 
-    def _pathit_relative(self, relative_base, path_string):
+    def _pathit_relative(self, relative_base_child, path_string):
         if not isinstance(path_string, pathlib.Path):
             if '{:' in path_string:  # special paths  # FIXME vs startswith
                 path_string = path_string.replace('{:', '{')
@@ -357,7 +355,11 @@ class ConfigBase:
             path = path.expanduser()
 
         if not path.is_absolute():
-            path = relative_base / path
+            if relative_base_child is None:
+                raise exc.NoBasePathError(f'Cannot resolve relative path {path} '
+                                          'from runtime config that lacks a path.')
+            else:
+                return relative_base_child.parent / path
 
         if '..' in path.parts:
             path = path.resolve()
@@ -431,10 +433,12 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         self._user_config = UserConfig(self)
         return self
 
-    def runtimeConfig(self, *blobs):
-        super().runtimeConfig(*blobs)
-        self._user_config = UserConfig._from_user_alt_config(self._path, self)
-        self._user_config.runtimeConfig(*child_blobs)
+    @classmethod
+    def runtimeConfig(cls, *blobs):
+        blob, *child_blobs = blobs
+        self = super().runtimeConfig(blob)
+        self._user_config = UserConfig.runtimeConfig(self, *child_blobs)
+        return self
 
     @property
     def user_config(self):
@@ -782,6 +786,20 @@ class UserConfig(ConfigBase):
         self.auth_config = auth_config
         return self
 
+    @classmethod
+    def runtimeConfig(cls, auth_config, *blobs):
+        if not blobs:
+            return UserConfig.__new__(cls, auth_config)
+        else:
+            blob, *child_blobs = blobs
+            self = super().runtimeConfig(blob)
+            self.auth_config = auth_config
+            # TODO auth store level?
+            if child_blobs:
+                self._secrets_runtime = stores.Runtime(child_blobs[0])
+
+            return self
+
     def _auth_store(self, type_):
         try:
             return {
@@ -805,7 +823,13 @@ class UserConfig(ConfigBase):
             raise err from e
 
     def _secrets(self, blob):
-        return self._get_store(stores.Secrets, blob)
+        try:
+            return self._get_store(stores.Secrets, blob)
+        except exc.NoBasePathError as e:
+            if hasattr(self, '_secrets_runtime'):
+                return self._secrets_runtime
+            else:
+                raise e
 
     def _mypass(self, blob):
         return self._get_store(stores.Mypass, blob)
@@ -863,7 +887,7 @@ class UserConfig(ConfigBase):
 
     def _get_path(self, paths):
         store_path, value = self._get_with_path(paths)
-        return self._pathit_relative(store_path.parent, value)
+        return self._pathit_relative(store_path, value)
 
     def _get(self, paths):
         _, value = self._get_with_path(paths)
@@ -937,7 +961,13 @@ class UserConfig(ConfigBase):
     @property
     def secrets(self):
         """ default failover for paths without explicit management """
-        return self._secrets(self.get_blob('auth-stores', 'secrets'))
+        try:
+            return self._secrets(self.get_blob('auth-stores', 'secrets'))
+        except:
+            if hasattr(self, '_secrets_runtime') and self.get_blob('auth-stores', 'runtime'):
+                return self._secrets_runtime
+            else:
+                raise e
 
     @property
     def _path_sources(self):

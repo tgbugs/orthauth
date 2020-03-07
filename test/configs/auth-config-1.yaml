@@ -66,3 +66,4 @@ auth-variables:  # insecure auth-config variables
   test-tang-init:
   test-value-1: a auth-config value
   test-value-2: a value that will be overwritten
+  oh-nose-her-api-keys:

@@ -127,8 +127,41 @@ class Secrets:
                         raise e
 
             if isinstance(current, dict):
-                raise ValueError(f'Your secret path is incomplete. Keys are {sorted(current.keys())}')
+                msg = f'Your secret path is incomplete. Keys are {sorted(current.keys())}'
+                av = None
+                name = None
+                names = None
+                current = None
+                del av
+                del name
+                del names
+                del current
+                raise ValueError(msg)
 
-            if '-file' in name and current.startswith('~/'):  # FIXME usability hack to allow ~/ in filenames
-                current = pathlib.Path(current).expanduser().as_posix()  # for consistency with current practice, keep paths as strings
+            if current is None:
+                # empty secrets are an error
+                msg = f'Value of secret at {names} is None.'
+                av = None
+                name = None
+                names = None
+                current = None
+                del av
+                del name
+                del names
+                del current
+                raise ValueError(msg)
+
             return current
+
+
+class Runtime(Secrets):
+
+    exists = True
+    _path = None
+
+    def __init__(self, blob):
+        self._sblob = QuietDict(blob)
+
+    @property
+    def name_id_map(self):
+        return self._sblob

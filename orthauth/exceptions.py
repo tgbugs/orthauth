@@ -36,3 +36,8 @@ class BadAuthConfigFormatError(OrthauthError):
 
 class SomethingWrongWithVariableInConfig(OrthauthError):
     """ a variable in a config is bad """
+
+
+class NoBasePathError(OrthauthError):
+    """ tried to resolve a path relative to None usually because
+        a runtime config value was not an absolute path"""

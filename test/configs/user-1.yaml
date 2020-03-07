@@ -79,3 +79,5 @@ auth-variables:
   test-multi-path-3: [
     'path/does/not/exist/file.ext',
     'user-1.yaml']
+  oh-nose-her-api-keys:
+    path: api runtime
