@@ -4,6 +4,7 @@ import sys
 import json
 import inspect
 import pathlib
+import warnings
 import functools
 import importlib
 from pprint import pformat
@@ -151,9 +152,11 @@ class ConfigBase:
 
         self = super().__new__(cls)
         try:
-            self._load_type = {'.json': self._load_json,
+            key = path if path is None else path.suffix
+            self._load_type = {None: self._load_runtime,
+                               '.json': self._load_json,
                                '.py': self._load_python,
-                               '.yaml': self._load_yaml}[path.suffix]
+                               '.yaml': self._load_yaml}[key]
         except KeyError as e:
             raise exc.UnsupportedConfigLangError(path.suffix) from e
 
@@ -193,8 +196,22 @@ class ConfigBase:
 
         return self
 
+    def runtimeConfig(self, *blobs):
+        # each child class must implement its own way of populating children
+        # NOTE runtime configs WILL fail if they contain relative paths
+        if self._path is not None:
+            raise TypeError('self._path is not None, cannot overwrite config at runtime')
+
+        #self._path = None  # FIXME vs
+        # /dev/null/this/path/does/not/exist/but/you/could/escape/with/enough/..
+        blob, *blos
+        self._runtime_config = blob
+
     def load_type(self):
-        log.warning('load_type is deprecated, use load instead')
+        cn = self.__class__.__name__
+        warnings.warn(f'{cn}.load_type is deprecated please switch to {cn}.load',
+                      DeprecationWarning,
+                      stacklevel=2)
         return self.load()
 
     def load(self):
@@ -236,6 +253,9 @@ class ConfigBase:
                  'py': ast.literal_eval,
                  'yaml': yaml.safe_load,}[format]
         return loadf(string)
+
+    def _load_runtime(self):
+        return self._runtime_config
 
     def _load_json(self):
         with open(self._path, 'rt') as f:
@@ -411,6 +431,11 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         self._user_config = UserConfig(self)
         return self
 
+    def runtimeConfig(self, *blobs):
+        super().runtimeConfig(*blobs)
+        self._user_config = UserConfig._from_user_alt_config(self._path, self)
+        self._user_config.runtimeConfig(*child_blobs)
+
     @property
     def user_config(self):
         uc = self._user_config
@@ -422,7 +447,6 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
     @property
     def dynamic_config(self):
-        import warnings
         cn = self.__class__.__name__
         warnings.warn(f'{cn}.dynamic_config is deprecated please switch to {cn}.user_config',
                       DeprecationWarning,
