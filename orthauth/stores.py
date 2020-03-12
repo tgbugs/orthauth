@@ -127,16 +127,38 @@ class Secrets:
                         raise e
 
             if isinstance(current, dict):
-                msg = f'Your secret path is incomplete. Keys are {sorted(current.keys())}'
-                av = None
-                name = None
-                names = None
-                current = None
-                del av
-                del name
-                del names
-                del current
-                raise ValueError(msg)
+                keys = sorted(current.keys())
+                ANGRIER = ['*' * len(k) for k in keys if k in av]
+                if ANGRIER:
+                    if len(ANGRIER) == 1:
+                        msg = f'WHY ARE YOU TRYING TO USE A SECRET {ANGRIER[0]} AS A NAME!?'
+                    else:
+                        msg = ('WHY ARE YOU TRYING TO USE MULTIPLE (!!) '
+                               f'SECRETS {" ".join(ANGRIER)} AS A NAME!?')
+
+                    av = None
+                    name = None
+                    names = None
+                    current = None
+                    keys = None
+                    del av
+                    del name
+                    del names
+                    del current
+                    del keys
+                    raise exc.SecretAsKeyError()
+
+                else:
+                    msg = f'Your secret path is incomplete. Keys are {keys}'
+                    av = None
+                    name = None
+                    names = None
+                    current = None
+                    del av
+                    del name
+                    del names
+                    del current
+                    raise ValueError(msg)
 
             if current is None:
                 # empty secrets are an error
