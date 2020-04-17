@@ -967,7 +967,7 @@ class UserConfig(ConfigBase):
             if hasattr(self, '_secrets_runtime') and self.get_blob('auth-stores', 'runtime'):
                 return self._secrets_runtime
             else:
-                raise e
+                raise
 
     @property
     def _path_sources(self):
