@@ -212,8 +212,25 @@ class ConfigBase:
                       stacklevel=2)
         return self.load()
 
+    def _mtime_changed(self):
+        """ Check if the modified time of self._path has changed.
+            Still hits the disk but can be used to avoid force a
+            full read of the file when there are no changes. """
+
+        if self._path is not None:  # no path, no disk, no worries
+            mtime = self._path.stat().st_mtime
+            if not hasattr(self, '_last_mtime'):
+                last_mtime = self._last_mtime = mtime
+            else:
+                last_mtime, self._last_mtime = self._last_mtime, mtime
+
+            return mtime != last_mtime
+
     def load(self):
-        return self._load_type()
+        if not hasattr(self, '_blob') or self._mtime_changed():
+            self._blob = self._load_type()
+
+        return self._blob
 
     def dump(self, config):
         """ Don't use this ... seriously """
@@ -815,9 +832,15 @@ class UserConfig(ConfigBase):
         return stores.Authinfo(self._blob_path(blob))
 
     def _get_store(self, store, blob):
+        cache_name = f'_c_{store.__name__}'
+        if hasattr(self, cache_name):
+            return getattr(self, cache_name)
+
         path = self._blob_path(blob)
         try:
-            return store(path)
+            store_obj = store(path)
+            setattr(self, cache_name, store_obj)
+            return store_obj
         except FileNotFoundError as e:
             err = exc.SomethingWrongWithVariableInConfig(f'{path} in {self._path}')
             raise err from e
@@ -945,6 +968,9 @@ class UserConfig(ConfigBase):
 
     @property
     def alt_config(self):
+        if hasattr(self, '_c_alt_config'):
+            return self._c_alt_config
+
         try:
             path = self._alt_config_path
             _test = self.load()
@@ -952,9 +978,12 @@ class UserConfig(ConfigBase):
             rename = _test.pop('rename', None)
             if _test:
                 raise ValueError('configs with top level alt-config may '
-                                 f'have only a rename section\n{_test}')
+                                f'have only a rename section\n{_test}')
 
-            return self._from_user_alt_config(path, self.auth_config, rename)
+            self._c_alt_config = self._from_user_alt_config(path,
+                                                            self.auth_config,
+                                                            rename)
+            return self._c_alt_config
         except KeyError:
             pass
 

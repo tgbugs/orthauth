@@ -86,7 +86,7 @@ class Secrets:
             # NOTE under these circumstances this pattern is ok because anyone
             # or anything who can call this function can access the secrets file.
             # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
-            # secrets could be exposted by brute force, but in thise case it is ok
+            # secrets could be exposted by brute force, but in this case it is ok
             # because it is more important to alert the user that they have just
             # tried to use a secret as a name and that it might be in their code.
             def all_values(d):
