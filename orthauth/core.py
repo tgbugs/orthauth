@@ -19,13 +19,37 @@ except ImportError as e:
     pass
 
 
+def crpath(__file__, name):
+    """ for use in combination with configure e.g.
+        `auth = oa.configure(oa.cpath(__file__))`
+        assuming that `auth-config.py` is the name
+        of your auth config file """
+    # NOTE: never set a default value for name
+    # because the call to this function should
+    # document the name of the file in a way that
+    # is easy to see locally
+    return pathlib.Path(__file__).parent / name
+
+
 def configure(auth_config_path, include=tuple()):
     """ hrm """
     return AuthConfig(auth_config_path, include=include)
 
 
+def configure_here(name, calling__name__, include=tuple()):
+    calling_module = importlib.import_module(calling__name__)
+    calling__file__ = calling_module.__file__
+    return AuthConfig._from_relative_path(calling__file__,
+                                          name,
+                                          include=include,
+                                          calling_module=calling_module)
+
+
 def configure_relative(name, include=tuple()):
-    """ hrm """
+    """ WARNING very bad performance due to using inspect """
+    warnings.warn(f'configure_relative is deprecated please switch to configure_here',
+                    DeprecationWarning,
+                    stacklevel=2)
     stack = inspect.stack(0)
     s1 = stack[1]
     calling__file__ = s1.filename

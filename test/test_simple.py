@@ -9,13 +9,13 @@ from .common import test_folder, s1, s2
 
 class TestDeprecations(unittest.TestCase):
     def test_d_dynamic_config(self):
-        auth = oa.configure_relative('auth-config.py')
+        auth = oa.configure_here('auth-config.py', __name__)
         dc = auth.dynamic_config
 
 
 class TestAuthConfig(unittest.TestCase):
     def test_auth_config_in_binary_blob(self):
-        auth = oa.configure_relative('auth-config.py')
+        auth = oa.configure_here('auth-config.py', __name__)
         blob = auth.load()
         assert blob == {'config-search-paths': ['../test/configs/user-1.yaml'],
                         'auth-variables': {'hrm': 'derp'}}
@@ -38,6 +38,13 @@ class TestConfigure(unittest.TestCase):
         auth = oa.configure(test_folder / 'auth-config-1.yaml')
         test = auth.load()
         assert test == self.tv
+
+    def test_configure_here(self):
+        auth = oa.configure_here('auth-config-0.yaml', __name__)
+        test = auth.load()
+        tv = {'config-search-paths': ['configs/user-1.yaml'],
+              'auth-variables': {'default-example': None}}
+        assert test == tv
 
     def test_configure_relative(self):
         auth = oa.configure_relative('auth-config-0.yaml')
