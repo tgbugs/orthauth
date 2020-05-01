@@ -568,6 +568,11 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         with open(ucp, 'wt') as f:
             f.write(self._serialize_user_config(format))
 
+    def get_list(self, variable_name):
+        """ if you know a variable holds a list use this """
+        var = self.get(variable_name, for_list=True)
+        return var
+
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """
         var = self.get(variable_name, for_path=True)
@@ -642,6 +647,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
     def get(self, variable_name, *args, **kwargs):
         """ look up the value of a variable name from auth store or config """
+        for_list = 'for_list' in kwargs and kwargs['for_list']
         for_path = 'for_path' in kwargs and kwargs['for_path']
         av = self.get_blob('auth-variables')
         if variable_name not in av:
@@ -679,12 +685,15 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         defaults = []
         if not isinstance(user_variable_value, dict):
             if isinstance(user_variable_value, list):
-                if not for_path:
+                if for_list:
+                    user_variable_value = [user_variable_value]
+                elif not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
                 else:
-                    user_variable_value = [self.user_config._pathit(p)
-                                   for p in user_variable_value if p is not None]
+                    user_variable_value = [
+                        self.user_config._pathit(p)
+                        for p in user_variable_value if p is not None]
 
                 defaults.extend(user_variable_value)
             else:
@@ -700,7 +709,9 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         elif 'default' in user_variable_value:
             d = user_variable_value['default']
             if isinstance(d, list):
-                if not for_path:
+                if for_list:
+                    d = [d]
+                elif not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
                 else:
@@ -716,7 +727,9 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
         if not isinstance(auth_variable_value, dict):
             if isinstance(auth_variable_value, list):
-                if not for_path:
+                if for_list:
+                    auth_variable_value = [auth_variable_value]
+                elif not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
                 else:
@@ -735,7 +748,9 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         elif 'default' in auth_variable_value:
             d = auth_variable_value['default']
             if isinstance(d, list):
-                if not for_path:
+                if for_list:
+                    d = [d]
+                elif not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
                 else:
@@ -766,6 +781,11 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
             get_uc = self.user_config._get_path
             def get_default(d):
                 return d
+        elif for_list:
+            get_uc = self.user_config._get
+            def get_default(d):
+                return d[0]
+
         else:
             get_uc = self.user_config._get
             def get_default(d):
@@ -890,6 +910,7 @@ class UserConfig(ConfigBase):
     def get(self, variable_name, *args, **kwargs):
         """ look up the value of a variable name from auth store or config """
         # ah the problem of interleveing values from sources of different rank ...
+        for_list = 'for_list' in kwargs and kwargs['for_list']
         for_path = 'for_path' in kwargs and kwargs['for_path']
         auth_variable_value = self.get_blob('auth-variables', variable_name)
         if auth_variable_value is None:
@@ -898,7 +919,9 @@ class UserConfig(ConfigBase):
         defaults = []
         if not isinstance(auth_variable_value, dict):
             if isinstance(auth_variable_value, list):
-                if not for_path:
+                if for_list:
+                    auth_variable_value = [auth_variable_value]
+                elif not for_path:
                     log.warning(f'attempting to get a default value for {variable_name} '
                                 'that is a list did you want get_path?')
 
