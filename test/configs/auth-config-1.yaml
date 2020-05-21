@@ -67,3 +67,13 @@ auth-variables:  # insecure auth-config variables
   test-value-1: a auth-config value
   test-value-2: a value that will be overwritten
   oh-nose-her-api-keys:
+  test-get-list:
+  test-get-list-default:
+    - this
+    - is
+    - a
+    - list
+    - default
+  test-get-list-empty:
+  test-get-list-not-in-user-config:
+  test-get-list-default-and-user: ['default']

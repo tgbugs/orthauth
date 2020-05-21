@@ -571,7 +571,10 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
     def get_list(self, variable_name):
         """ if you know a variable holds a list use this """
         var = self.get(variable_name, for_list=True)
-        return var
+        if var is None:
+            return []
+        else:
+            return var
 
     def get_path(self, variable_name):
         """ if you know a variable holds a path use this to autoconvert """

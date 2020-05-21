@@ -81,3 +81,13 @@ auth-variables:
     'user-1.yaml']
   oh-nose-her-api-keys:
     path: api runtime
+  test-get-list:
+    - this
+    - is
+    - a
+    - list
+    - from
+    - user
+    - config
+  test-get-list-empty:
+  test-get-list-default-and-user: ['user']

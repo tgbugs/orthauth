@@ -133,6 +133,26 @@ class TestSimple(unittest.TestCase):
     def test_multi_path_3(self):
         assert self.auth.get_path('test-multi-path-3') == self.auth.user_config._path
 
+    def test_get_list(self):
+        tv = self.auth.get_list('test-get-list')
+        assert tv == ['this', 'is', 'a', 'list', 'from', 'user', 'config']
+
+    def test_get_list_default(self):
+        tv = self.auth.get_list('test-get-list-default')
+        assert tv == ['this', 'is', 'a', 'list', 'default']
+
+    def test_get_list_empty(self):
+        tv = self.auth.get_list('test-get-list-empty')
+        assert isinstance(tv, list) and not tv
+
+    def test_get_list_not_in_user_config(self):
+        tv = self.auth.get_list('test-get-list-not-in-user-config')
+        assert isinstance(tv, list) and not tv
+
+    def test_get_list_default_and_user(self):
+        tv = self.auth.get_list('test-get-list-default-and-user')
+        assert tv == ['user']
+
 
 class TestMakeUserConfig(unittest.TestCase):
     def setUp(self):
