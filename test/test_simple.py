@@ -191,3 +191,16 @@ class TestPathInConfig(unittest.TestCase):
         tv = test_folder / 'somewhere-else' / 'some-other-file.ext'
         test = self.auth.get_path('paths-in-user-config')
         assert test == tv
+
+
+class TestBadPaths(unittest.TestCase):
+    def setUp(self):
+        sc = test_folder / 'auth-config-bad-paths.yaml'
+        self.auth = oa.AuthConfig(sc)
+
+    def test_path_relative_store(self):
+        try:
+            test = self.auth.get_path('test')
+            assert False, 'should have failed'
+        except oa.exceptions.SomethingWrongWithVariableInConfig as e:
+            print(e)

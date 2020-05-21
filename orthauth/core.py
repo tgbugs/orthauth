@@ -886,7 +886,10 @@ class UserConfig(ConfigBase):
             setattr(self, cache_name, store_obj)
             return store_obj
         except FileNotFoundError as e:
-            err = exc.SomethingWrongWithVariableInConfig(f'{path} in {self._path}')
+            msg = (f'In the config located at: {self._path!r}\n'
+                   f'the following path does not exist: {path!r}\n'
+                   f'the raw value from the config was: {blob["path"]}')
+            err = exc.SomethingWrongWithVariableInConfig(msg)
             raise err from e
 
     def _secrets(self, blob):

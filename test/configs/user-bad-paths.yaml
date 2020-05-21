@@ -1,0 +1,6 @@
+auth-stores:
+  secrets:
+    path: '{:user-config-path}/does-not-exist'
+auth-variables:
+  test:
+    path: a b c d e f g

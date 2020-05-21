@@ -1,0 +1,4 @@
+config-search-paths:
+  - user-bad-paths.yaml
+auth-variables:
+  test:
