@@ -55,9 +55,11 @@ stored as a secret from being used as a key to find another secret.
 be implemented in the language consuming the config, not in the config.
 
 ## Currently supported config formats
-* yaml
-* json
-* python dictionary literals
+| Format                     | Support         | Install                      |
+| -------------------------- | --------------- | ---------------------------- |
+| json                       | builtin         | `pip install orthauth`       |
+| python dictionary literals | builtin         | `pip install orthauth`       |
+| yaml                       | requires pyyaml | `pip install orthauth[yaml]` |
 
 ## Usage
 ```python
