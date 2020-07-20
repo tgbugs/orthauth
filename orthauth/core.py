@@ -218,6 +218,9 @@ class ConfigBase:
         else:
             self._include = tuple()
 
+        if self._path is not None:
+            self.load()
+
         return self
 
     @classmethod
@@ -252,10 +255,22 @@ class ConfigBase:
 
     def load(self):
         if not hasattr(self, '_blob') or self._mtime_changed():
-            _blob = self._load_type()
+            msg = (f'The config at {self._path!r} '
+                   'should not be empty!')
+            empty_error = exc.EmptyConfigError(msg)
+
+            try:
+                _blob = self._load_type()
+            except json.decoder.JSONDecodeError as e:
+                raise empty_error from e
+            except SyntaxError as e:
+                if e.msg == 'unexpected EOF while parsing' and e.offset == 0:
+                    raise empty_error from e
+                else:
+                    raise e
+
             if _blob is None:
-                raise ValueError(f'The config at {self._path!r} '
-                                 'is empty when it should not be!')
+                raise empty_error
 
             self._blob = _blob
 

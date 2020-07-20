@@ -26,6 +26,10 @@ class ConfigExistsError(OrthauthError):
     """ Config file already exists, so don't overwrite it """
 
 
+class EmptyConfigError(OrthauthError):
+    """ Config file is empty! """
+
+
 class VariableCollisionError(OrthauthError):
     """ a variable is colliding between configs """
 

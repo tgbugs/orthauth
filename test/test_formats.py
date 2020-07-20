@@ -8,6 +8,7 @@ from .common import test_folder
 
 
 class TestFormats(unittest.TestCase):
+
     def _config(self, name):
         path = test_folder / name
         return oa.AuthConfig(path)
@@ -73,3 +74,59 @@ class TestFormats(unittest.TestCase):
         finally:
             if path.exists():
                 path.unlink()
+
+
+class TestEmptyAuthConfig(unittest.TestCase):
+
+    _config = TestFormats._config
+
+    def _do_test(self, suffix):
+        path = (test_folder / 'auth-config-empty').with_suffix(suffix)
+        try:
+            with open(path, 'wt') as f:
+                pass
+
+            try:
+                config = self._config(path.name)
+                assert False, 'should have failed'
+            except exc.EmptyConfigError:
+                pass
+
+        finally:
+            if path.exists():
+                path.unlink()
+
+    def test_json(self):
+        self._do_test('.json')
+
+    def test_python(self):
+        self._do_test('.py')
+
+    def test_yaml(self):
+        self._do_test('.yaml')
+
+
+class TestEmptyUserConfig(TestEmptyAuthConfig):
+
+    def _do_test(self, suffix):
+        path = (test_folder / 'user-config-empty').with_suffix(suffix)
+
+        _source = self._config('auth-config-1.yaml')
+        _ablob = _source.load()
+        _ablob['config-search-paths'] = [path]
+
+        try:
+            with open(path, 'wt') as f:
+                pass
+
+            try:
+                auth = oa.AuthConfig.runtimeConfig(_ablob)
+                #auth.get('default-example')  # needed if don't call self.load() in __new__
+                assert False, 'should have failed due to empty user config'
+            except exc.EmptyConfigError:
+                pass
+
+        finally:
+            if path.exists():
+                path.unlink()
+
