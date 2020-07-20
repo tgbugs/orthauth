@@ -252,7 +252,12 @@ class ConfigBase:
 
     def load(self):
         if not hasattr(self, '_blob') or self._mtime_changed():
-            self._blob = self._load_type()
+            _blob = self._load_type()
+            if _blob is None:
+                raise ValueError(f'The config at {self._path!r} '
+                                 'is empty when it should not be!')
+
+            self._blob = _blob
 
         return self._blob
 
@@ -269,7 +274,13 @@ class ConfigBase:
         elif format == 'py':
             return pformat(config)
         elif format == 'yaml':
-            return yaml.dump(config, default_flow_style=False)
+            try:
+                return yaml.dump(config, default_flow_style=False)
+            except NameError as e:
+                msg = (f'Module yaml was not found while tyring to load {self._path}\n'
+                       'To resolve this issue reinstall orthauth with yaml '
+                       'support enabled\n or reformat your config to .py')
+                raise ModuleNotFoundError(msg) from e
         else:
             raise NotImplementedError(f'serialization to {format!r} is not ready')
 
@@ -326,7 +337,7 @@ class ConfigBase:
             except NameError as e:
                 msg = (f'Module yaml was not found while tyring to load {self._path}\n'
                        'To resolve this issue reinstall orthauth with yaml '
-                       'support enabled\n or reform your config to .py')
+                       'support enabled\n or reformat your config to .py')
                 raise ModuleNotFoundError(msg) from e
 
     @staticmethod
@@ -565,8 +576,9 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
         if not ucp.parent.exists():
             ucp.parent.mkdir(parents=True)
 
+        string = self._serialize_user_config(format)
         with open(ucp, 'wt') as f:
-            f.write(self._serialize_user_config(format))
+            f.write(string)
 
     def get_list(self, variable_name):
         """ if you know a variable holds a list use this """
