@@ -122,7 +122,7 @@ class TestSimple(unittest.TestCase):
         assert self.auth.get_path('test-expanduser') == tv
 
     def test_default(self):
-        assert self.auth.get('default-example') == '42'
+        assert self.auth.get('default-example') == 42
 
     def test_multi_path_1(self):
         assert self.auth.get_path('test-multi-path-1') == self.auth._path

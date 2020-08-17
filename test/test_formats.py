@@ -37,7 +37,7 @@ class TestFormats(unittest.TestCase):
             pass
 
         auth = oa.AuthConfig.runtimeConfig(_ablob)
-        assert auth.get('default-example') == '42', 'deep thought required'
+        assert auth.get('default-example') == 42, 'deep thought required'
         auth = oa.AuthConfig.runtimeConfig(ablob, ublob)
         assert auth.get('test-after-init') == 'after-init', 'failure'
         auth = oa.AuthConfig.runtimeConfig(ablob, ublob, sblob)

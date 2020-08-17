@@ -822,7 +822,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                 if len(d) == 1 and d[0] is None:
                     return
                 else:
-                    return str(d[0])
+                    return d[0]
 
         for f, v in zip((getenv,
                          get_uc,
@@ -976,7 +976,7 @@ class UserConfig(ConfigBase):
                 if len(d) == 1 and d[0] is None:
                     return
                 else:
-                    return str(d[0])
+                    return d[0]
 
         for f, v in zip((getenv,
                          self._get_path if for_path else self._get,
