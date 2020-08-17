@@ -77,3 +77,5 @@ auth-variables:  # insecure auth-config variables
   test-get-list-empty:
   test-get-list-not-in-user-config:
   test-get-list-default-and-user: ['default']
+  test-env-none:
+    environment-variables: 'NOT_SET_1 NOT_SET_2'

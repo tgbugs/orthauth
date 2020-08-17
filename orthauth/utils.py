@@ -67,7 +67,7 @@ class QuietTuple(tuple):
         return '[secure]'
 
     def __reduce__(self):
-        return (list, tuple())
+        return (tuple, tuple())
 
 
 class QuietDict(dict):
@@ -94,4 +94,4 @@ class QuietDict(dict):
         return '{secure}'
 
     def __reduce__(self):
-        return (dict, {})
+        return (dict, tuple())

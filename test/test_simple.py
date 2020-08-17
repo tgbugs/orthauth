@@ -100,6 +100,21 @@ class TestSimple(unittest.TestCase):
 
         assert Test.api_key, [d for d in dir(Test) if not d.startswith('__')]
 
+    def test_tangential_env_none(self):
+        @self.auth.tangential('should_be_none', 'test-env-none')
+        class Test:
+            pass
+
+        assert Test.should_be_none is None
+
+    def test_tangential_init_env_none(self):
+        @self.auth.tangential_init('should_be_none', 'test-env-none')
+        class Test:
+            pass
+
+        t = Test()
+        assert t.should_be_none is None
+
     def test_path_list_variant(self):
         assert self.auth.get('paths-as-list-example') == 'lol'
 
@@ -116,6 +131,9 @@ class TestSimple(unittest.TestCase):
             assert self.auth.get('env-list-example') == tv
         finally:
             os.environ.pop('QUITE')
+
+    def test_env_none(self):
+        assert self.auth.get('test-env-none') is None
 
     def test_expanduser(self):
         tv = pathlib.Path('~/').expanduser()
