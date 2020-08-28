@@ -78,7 +78,14 @@ class Secrets:
         # sometimes the easiest solution is just to read from disk every single time
         if self.exists:
             with open(self.filename, 'rt') as f:
-                return QuietDict(yaml.safe_load(f))
+                blob = yaml.safe_load(f)
+
+            if blob is None:
+                msg = (f'The config at {self.filename!r} '
+                        'should not be empty!')
+                raise exc.EmptyConfigError(msg)
+
+            return QuietDict(blob)
 
     def __call__(self, *names):
         if self.exists:

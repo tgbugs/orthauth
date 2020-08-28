@@ -129,4 +129,3 @@ class TestEmptyUserConfig(TestEmptyAuthConfig):
         finally:
             if path.exists():
                 path.unlink()
-

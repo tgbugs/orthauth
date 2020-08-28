@@ -242,3 +242,23 @@ class TestBadPaths(unittest.TestCase):
             assert False, 'should have failed'
         except oa.exceptions.SomethingWrongWithVariableInConfig as e:
             print(e)
+
+
+class TestEmptySecrets(unittest.TestCase):
+    def setUp(self):
+        sc = test_folder / 'auth-config-empty-secrets.yaml'
+        self.auth = oa.AuthConfig(sc)
+
+    def test_empty_path(self):
+        try:
+            test = self.auth.get_path('missing')
+            assert False, 'should have failed'
+        except oa.exceptions.EmptyConfigError as e:
+            print(e)
+
+    def test_empty_value(self):
+        try:
+            test = self.auth.get('missing')
+            assert False, 'should have failed'
+        except oa.exceptions.EmptyConfigError as e:
+            print(e)
