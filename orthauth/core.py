@@ -218,6 +218,17 @@ class ConfigBase:
         else:
             self._include = tuple()
 
+        # XXX there is a tradeoff here, if we defer loading, then we
+        # can start up faster, however, if there is an error in the
+        # config, then things become very confusing and hard to debug
+        # therefor on the balance we are better off detecting errors
+        # in configs at load time so that it is clear what went wrong
+        # we might be able to improve this a tiny bit by keeping a
+        # single file that records paths and modified times for
+        # configs so that we only have to read a single file and stat
+        # the rest which should be faster than what we do right now,
+        # however that is a micro optimization at this point, however
+        # it may be worth it as the number of configs in use increases
         if self._path is not None:
             self.load()
 
@@ -543,6 +554,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
     def load(self):
         if not hasattr(self, '_blob'):
+            # auth configs are static so it is ok to cache them
             self._blob = super().load()
 
         return self._blob
@@ -695,7 +707,8 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
             user_variable_value = self.user_config.get_blob('auth-variables', variable_name)
             if user_variable_value is None:
                 user_variable_value = {}
-                f1 = True
+                f1 = TypeError(f'Value of {variable_name} is None'
+                               f' in user config {self.user_config._path}')
             else:
                 f1 = False
         except KeyError as e:

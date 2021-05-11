@@ -51,8 +51,9 @@ class Secrets:
         self._path = path
         if self.exists:
             if os.name == 'nt':
-                log.warning('Make sure other user cannot read your secrets file '
-                            'because right at the moment I don\'t know how to check.')
+                log.warning(
+                    'Make sure other users cannot read your secrets file '
+                    'because right at the moment I don\'t know how to check.')
             else:
                 fstat = os.stat(self._path)
                 mode = oct(stat.S_IMODE(fstat.st_mode))
