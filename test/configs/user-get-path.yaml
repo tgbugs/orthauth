@@ -1,0 +1,6 @@
+auth-stores:  # per user config only 1 source per type
+  # list in order of precedence ??
+  secrets:
+    path: secrets-test-1.yaml # relative paths start from the location of the
+auth-variables:
+  some-path-var: get-path key

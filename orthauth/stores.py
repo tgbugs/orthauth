@@ -58,8 +58,9 @@ class Secrets:
                 fstat = os.stat(self._path)
                 mode = oct(stat.S_IMODE(fstat.st_mode))
                 if mode != '0o600' and mode != '0o700':
-                    raise FileNotFoundError(f'Your secrets file {self._path} '
-                                            f'can be read by the whole world! {mode}')
+                    raise exc.BadFilePermissionsError(
+                        f'Your secrets file {self._path} '
+                        f'can be read by the whole world! {mode}')
 
     @property
     def filename(self):

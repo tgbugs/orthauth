@@ -45,3 +45,9 @@ class SomethingWrongWithVariableInConfig(OrthauthError):
 class NoBasePathError(OrthauthError):
     """ tried to resolve a path relative to None usually because
         a runtime config value was not an absolute path"""
+
+
+class BadFilePermissionsError(OrthauthError):
+    """ file or folder has bad/dangerous/insecure settings """
+
+

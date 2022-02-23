@@ -231,6 +231,17 @@ class TestPathInConfig(unittest.TestCase):
         assert test == tv
 
 
+class TestConfigPathNoKeyFilePath(unittest.TestCase):
+    def setUp(self):
+        sc = test_folder / 'auth-get-path.yaml'
+        self.auth = oa.AuthConfig(sc)
+
+    def test_get_file_path_from_config_path(self):
+        tv = test_folder / 'somewhere-else' / 'some-other-file.ext'
+        test = self.auth.get_path('some-path-var')
+        assert test == tv
+
+
 class TestBadPaths(unittest.TestCase):
     def setUp(self):
         sc = test_folder / 'auth-config-bad-paths.yaml'
