@@ -3,6 +3,52 @@ import logging
 from . import exceptions as exc
 
 
+def sxpr_to_python(string):
+    from sxpyr import sxpyr
+    parse_plist = sxpyr.configure(**sxpyr.conf_plist)  # FIXME error on lack of **
+    read_plist = sxpyr.conf_read(parse_plist, sxpyr.WalkPl)
+    def cf(ast):
+        sxpyr  # yay scoping rules
+        if isinstance(ast, sxpyr.PList):
+            v = [_.caste(cf) if hasattr(_, 'caste') else _
+                 for _ in ast.value]  # recurse
+            if v:
+                return sxpyr.plist_to_dict(v)
+        elif isinstance(ast, sxpyr.List):
+            # XXX this isn't the ast at this point, it is the DataType layer
+            # sometimes an Ast leaks through ... sigh inhomogenaity in the IR
+            return [_.caste(cf) if hasattr(_, 'caste') else cf(_)
+                    for _ in ast.value]
+        elif isinstance(ast, sxpyr.Ast):
+            return ast.value
+        else:
+            return ast
+
+    def _cf(ast):
+        if False and isinstance(ast, sxpyr.PList):
+            return sxpyr.plist_to_dict(ast.value)
+        elif isinstance(ast, sxpyr.ListAbstract):
+            return [_.caste(cf) for _ in ast.collect]
+        elif isinstance(ast, sxpyr.Ast):
+            return ast.value
+        elif isinstance(ast, str):
+            return ast
+        else:
+            raise NotImplementedError(f'asdf {ast!r}')
+            return ast
+
+    _raw = list(read_plist(string))
+    if not _raw:
+        # note that nil () -> python [] so None is python convention
+        # however because this is in orthauth we just raise the empty
+        # config error and cut out the middleman
+        raise exc.EmptyConfigError()
+
+    raw = _raw[0]
+    asdf = raw.caste(cf)
+    return asdf
+
+
 def makeSimpleLogger(name, level=logging.INFO):
     # TODO use extra ...
     logger = logging.getLogger(name)

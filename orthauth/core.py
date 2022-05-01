@@ -11,7 +11,9 @@ from pprint import pformat
 from . import stores
 from . import exceptions as exc
 from .utils import branches, getenv, parse_paths
-from .utils import log, logd
+from .utils import log, logd, sxpr_to_python
+
+# TODO multi-get to reduce reads via context manager maybe?
 
 try:
     import yaml  # FIXME DANGERZONE :/
@@ -180,6 +182,7 @@ class ConfigBase:
             self._load_type = {None: self._load_runtime,
                                '.json': self._load_json,
                                '.py': self._load_python,
+                               '.sxpr': self._load_sxpr,
                                '.yaml': self._load_yaml}[key]
         except KeyError as e:
             raise exc.UnsupportedConfigLangError(path.suffix) from e
@@ -299,6 +302,9 @@ class ConfigBase:
             return json.dumps(config, indent=2, sort_keys=True)
         elif format == 'py':
             return pformat(config)
+        elif format == 'sxpr':
+            # XXX expect failure for any complex types
+            return python_to_sxpr(config)
         elif format == 'yaml':
             try:
                 return yaml.dump(config, default_flow_style=False)
@@ -327,6 +333,7 @@ class ConfigBase:
     def _load_string(self, string, format):
         loadf = {'json': json.loads,
                  'py': ast.literal_eval,
+                 'sxpr': sxpr_to_python,
                  'yaml': yaml.safe_load,}[format]
         return loadf(string)
 
@@ -355,6 +362,10 @@ class ConfigBase:
 
         with open(self._path, 'rt') as f:
             return ast.literal_eval(f.read())
+
+    def _load_sxpr(self):
+        with open(self._path, 'rt') as f:
+            return sxpr_to_python(f.read())
 
     def _load_yaml(self):
         with open(self._path, 'rt') as f:

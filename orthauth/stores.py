@@ -2,7 +2,7 @@ import os
 import stat
 import pathlib
 from . import exceptions as exc
-from .utils import QuietDict, log
+from .utils import QuietDict, log, sxpr_to_python
 
 try:
     import yaml  # FIXME DANGERZONE :/
@@ -79,15 +79,22 @@ class Secrets:
     def name_id_map(self):
         # sometimes the easiest solution is just to read from disk every single time
         if self.exists:
-            with open(self.filename, 'rt') as f:
-                blob = yaml.safe_load(f)
+            if self._path.suffix in ('.yaml', '.yml'):
+                with open(self.filename, 'rt') as f:
+                    blob = yaml.safe_load(f)
+            elif self._path.suffix == '.sxpr':
+                with open(self.filename, 'rt') as f:
+                    blob = sxpr_to_python(f.read())
+            else:
+                breakpoint()
+                raise ValueError('FIXME detect this statically before a runtime error')
 
             if blob is None:
                 msg = (f'The config at {self.filename!r} '
                         'should not be empty!')
                 raise exc.EmptyConfigError(msg)
 
-            return QuietDict(blob)
+            return QuietDict(blob)  # XXX NOTE quiet is not recursive
 
     def __call__(self, *names):
         if self.exists:
@@ -191,7 +198,7 @@ class Runtime(Secrets):
     _path = None
 
     def __init__(self, blob):
-        self._sblob = QuietDict(blob)
+        self._sblob = QuietDict(blob)  # XXX NOTE quiet is not recursive
 
     @property
     def name_id_map(self):

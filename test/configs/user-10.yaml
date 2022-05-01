@@ -1,0 +1,7 @@
+auth-stores:
+  secrets:
+    path: '{:user-config-path}/orthauth/secrets.yaml'
+auth-variables:
+  test-include-relative-path: null
+  test-include-relative-path-default: null
+  test-include-relative-path-envars: null

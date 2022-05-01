@@ -1,5 +1,6 @@
 import json
 import yaml
+from sxpyr import sxpyr
 import pprint
 import unittest
 import orthauth as oa
@@ -75,6 +76,22 @@ class TestFormats(unittest.TestCase):
             if path.exists():
                 path.unlink()
 
+    def test_sxpr(self):
+        path = test_folder / 'auth-config-1.sxpr'
+        try:
+            with open(test_folder / 'auth-config-1.yaml', 'rt') as f, open(path, 'wt') as o:
+                d = yaml.safe_load(f)
+                pl = sxpyr.python_to_sxpr(d)
+                out = pl._print(sxpyr.print_plist)
+                o.write(out)
+
+            config = self._config(path.name)
+            self._do_test(config)
+
+        finally:
+            if path.exists():
+                path.unlink()
+
 
 class TestEmptyAuthConfig(unittest.TestCase):
 
@@ -104,6 +121,9 @@ class TestEmptyAuthConfig(unittest.TestCase):
 
     def test_yaml(self):
         self._do_test('.yaml')
+
+    def test_sxpr(self):
+        self._do_test('.sxpr')
 
 
 class TestEmptyUserConfig(TestEmptyAuthConfig):

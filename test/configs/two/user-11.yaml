@@ -1,0 +1,16 @@
+auth-stores:
+  secrets:
+    path: '{:user-config-path}/orthauth/secrets.yaml'
+auth-variables:
+  '-': null
+  a: null
+  b: null
+  e: null
+  h: null
+  i: null
+  l: null
+  n: null
+  o: null
+  r: null
+  t: null
+  v: null

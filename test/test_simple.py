@@ -171,6 +171,18 @@ class TestSimple(unittest.TestCase):
         tv = self.auth.get_list('test-get-list-default-and-user')
         assert tv == ['user']
 
+    def test_key_only_in_user_config(self):
+        # FIXME the issue only surfaces if the value is None which is bad
+        tv = self.auth.get('test-key-only-in-user-config')
+        # FIXME not sure if correct behavior, pretty sure
+        # we don't want this to fall through here but
+        # instead want it to be an error because it is
+        # something can only happen during development
+        # since it requires the code to know about an
+        # auth variable that the auth config does not contain
+        # FIXME we may have to do this in the linting pass
+        assert tv == None
+
 
 class TestMakeUserConfig(unittest.TestCase):
     def setUp(self):
