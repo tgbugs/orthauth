@@ -278,7 +278,8 @@ class ConfigBase:
             except json.decoder.JSONDecodeError as e:
                 raise empty_error from e
             except SyntaxError as e:
-                if e.msg == 'unexpected EOF while parsing' and e.offset == 0:
+                if (e.msg in ('unexpected EOF while parsing', 'invalid syntax') and
+                    e.offset == 0):
                     raise empty_error from e
                 else:
                     raise e
