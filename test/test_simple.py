@@ -259,19 +259,14 @@ class TestConfigPathNoKeyFilePath(unittest.TestCase):
         self.auth = oa.AuthConfig(sc)
 
     def test_get_file_path_from_config_path(self):
+        # the case where a default value is a valid path in a secrets
+        # files could be added to linting, but cannot be default
+        # behavior due to ambiguity
         try:
             test = self.auth.get_path('some-path-var')
             assert False, 'should have failed'
         except oa.exceptions.SomethingWrongWithVariableInConfig as e:
             pass
-        # this should probably be a linting error due to the ambiguity
-
-        # the logic we want is as follows
-        # if config path exists in secrets and file path does not exist
-        # resolve the config path and check, the other 3 conditions
-        # fall through an most error
-        # config path exists in secrets and file path also exists ...
-        # should probably error just from the absurdity and ambiguity
 
     def test_config_path_ok(self):
         tv = test_folder / 'somewhere-else' / 'some-other-file.ext'

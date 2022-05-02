@@ -420,12 +420,6 @@ class ConfigBase:
         if 'paths-nested' in auth_variable_value:
             raw_paths += list(branches(auth_variable_value['paths-nested']))
 
-        """
-        if 'path-default' in auth_variable_value:
-            # XXX NOTE internal use only
-            raw_paths += [auth_variable_value['path-default']]
-        """
-
         try:
             paths = list(parse_paths(raw_paths))
         except exc.VariableNotDefinedError as e:
@@ -768,26 +762,12 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
                 defaults.extend(user_variable_value)
             else:
-                #_uvv = user_variable_value
                 if for_path and user_variable_value is not None:
                     user_variable_value = self.user_config._pathit(user_variable_value)
 
                 defaults.append(user_variable_value)
 
             user_variable_value = {}
-                """
-                if isinstance(_uvv, str) and ' ' in _uvv:
-                    # user_variable_value could also be a config path
-                    # XXX HOWEVER, despite having implemented this we
-                    # are NOT going to enable it because it adds
-                    # massive ambiguity and thus performance cost even
-                    # limiting it to >= 2 element paths as we do here
-                    user_variable_value = {'path-default': _uvv}
-                else:
-                    user_variable_value = {}
-                # assigning this as such is part one of the solution
-                # then you have to deal with non-existent paths and indexing strings with strings
-                """
 
         # there is a limited use case for allowing users to set a value, if they also
         # want to define custom user set environment variables
@@ -879,20 +859,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                 else:
                     return d[0]
 
-        """
-        # XXX this is a horrible implementation
-        _udp = (user_variable_value['path-default']
-                if 'path-default' in user_variable_value else False)
-        def _get_path_fail_ok(v, _f=get_uc, udp=_udp):
-            try:
-                return _f(v)
-            except exc.SecretError as e:
-                if v != udp:
-                    raise e
-        """
-
         for f, v in zip((getenv,
-                         #_get_path_fail_ok if _udp else get_uc,
                          get_uc,
                          self.user_config._gsac_wrap,
                          get_default),
@@ -1047,17 +1014,8 @@ class UserConfig(ConfigBase):
                 else:
                     return d[0]
 
-        """
-        def _get_path_fail_ok(v, _f=self._get_path if for_path else self._get):
-            try:
-                return _f(v)
-            except exc.SecretError as e:
-                pass
-        """
-
         for f, v in zip((getenv,
                          self._get_path if for_path else self._get,
-                         #_get_path_fail_ok,
                          self._gsac_wrap,
                          get_default),
                         (envars, paths, alt, defaults)):
