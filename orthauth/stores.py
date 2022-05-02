@@ -128,6 +128,20 @@ class Secrets:
                     del names
                     del current
                     raise exc.SecretAsKeyError(f'WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
+                elif not isinstance(current, dict):
+                    av = None
+                    name = None
+                    names = None
+                    current = None
+                    del av
+                    del name
+                    del names
+                    del current
+                    # XXX reminder that this can be used for brute
+                    # force to see if a terminal path value exists,
+                    # one wouldn't actually do this, but be aware
+                    msg = 'This secret path does not exist.'
+                    raise exc.SecretPathError(msg)
                 else:
                     try:
                         current = current[name]
@@ -140,7 +154,8 @@ class Secrets:
                         del name
                         del names
                         del current
-                        raise e
+                        msg = 'This secret path does not exist.'
+                        raise exc.SecretPathError(msg) from e
 
             if isinstance(current, dict):
                 keys = sorted(current.keys())
@@ -162,10 +177,10 @@ class Secrets:
                     del names
                     del current
                     del keys
-                    raise exc.SecretAsKeyError()
+                    raise exc.SecretAsKeyError(msg)
 
                 else:
-                    msg = f'Your secret path is incomplete. Keys are {keys}'
+                    msg = f'This secret path is incomplete. Keys are {keys}'
                     av = None
                     name = None
                     names = None
@@ -174,7 +189,7 @@ class Secrets:
                     del name
                     del names
                     del current
-                    raise ValueError(msg)
+                    raise exc.SecretPathError(msg)
 
             if current is None:
                 # empty secrets are an error
@@ -187,7 +202,7 @@ class Secrets:
                 del name
                 del names
                 del current
-                raise ValueError(msg)
+                raise exc.SecretEmptyError(msg)
 
             return current
 

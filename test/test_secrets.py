@@ -21,7 +21,7 @@ class TestSecrets(unittest.TestCase):
         try:
             test = self.secrets('user', 'defined', 'path')
             assert False, 'should have failed'
-        except ValueError:
+        except exc.SecretPathError:
             pass
 
     def test_ANGRY_dissapointed(self):
@@ -42,5 +42,5 @@ class TestSecrets(unittest.TestCase):
         try:
             test = self.secrets('you', 'see', 'nothing')
             assert False, 'should have failed'
-        except ValueError:
+        except exc.SecretEmptyError:
             pass

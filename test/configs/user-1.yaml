@@ -92,3 +92,4 @@ auth-variables:
   test-get-list-empty:
   test-get-list-default-and-user: ['user']
   test-key-only-in-user-config: null
+  test-key-only-in-user-config-not-null: hello

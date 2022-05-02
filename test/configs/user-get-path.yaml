@@ -3,4 +3,10 @@ auth-stores:  # per user config only 1 source per type
   secrets:
     path: secrets-test-1.yaml # relative paths start from the location of the
 auth-variables:
-  some-path-var: get-path key
+  some-path-var: get-path key  # I swear this used to work in an old example
+  spv-1:
+    path: get-path key
+  spv-2:
+    path: get-path missing
+  spv-3:
+    path: get-path key other

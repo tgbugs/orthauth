@@ -173,15 +173,25 @@ class TestSimple(unittest.TestCase):
 
     def test_key_only_in_user_config(self):
         # FIXME the issue only surfaces if the value is None which is bad
-        tv = self.auth.get('test-key-only-in-user-config')
-        # FIXME not sure if correct behavior, pretty sure
-        # we don't want this to fall through here but
-        # instead want it to be an error because it is
-        # something can only happen during development
-        # since it requires the code to know about an
-        # auth variable that the auth config does not contain
-        # FIXME we may have to do this in the linting pass
-        assert tv == None
+        tv_nn = self.auth.get('test-key-only-in-user-config-not-null')
+        assert tv_nn == 'hello'
+        # we need to warn on this ?? I'm pretty sure that I have made
+        # use of the ability to do this at some point in time to issue
+        # a patch fix or something like that, might be worth keeping for
+        # that reason?
+        try:
+            tv = self.auth.get('test-key-only-in-user-config')
+            # FIXME not sure if correct behavior, pretty sure
+            # we don't want this to fall through here but
+            # instead want it to be an error because it is
+            # something can only happen during development
+            # since it requires the code to know about an
+            # auth variable that the auth config does not contain
+            # FIXME we may have to do this in the linting pass
+            assert tv == None
+            assert False, 'should not get here? see comments'
+        except KeyError as e:
+            pass
 
 
 class TestMakeUserConfig(unittest.TestCase):
@@ -249,9 +259,38 @@ class TestConfigPathNoKeyFilePath(unittest.TestCase):
         self.auth = oa.AuthConfig(sc)
 
     def test_get_file_path_from_config_path(self):
+        try:
+            test = self.auth.get_path('some-path-var')
+            assert False, 'should have failed'
+        except oa.exceptions.SomethingWrongWithVariableInConfig as e:
+            pass
+        # this should probably be a linting error due to the ambiguity
+
+        # the logic we want is as follows
+        # if config path exists in secrets and file path does not exist
+        # resolve the config path and check, the other 3 conditions
+        # fall through an most error
+        # config path exists in secrets and file path also exists ...
+        # should probably error just from the absurdity and ambiguity
+
+    def test_config_path_ok(self):
         tv = test_folder / 'somewhere-else' / 'some-other-file.ext'
-        test = self.auth.get_path('some-path-var')
+        test = self.auth.get_path('spv-1')
         assert test == tv
+
+    def test_config_path_missing(self):
+        try:
+            test = self.auth.get_path('spv-2')
+            assert False, 'should have failed'
+        except oa.exceptions.SecretError as e:
+            pass
+
+    def test_config_path_beyond(self):
+        try:
+            test = self.auth.get_path('spv-3')
+            assert False, 'should have failed'
+        except oa.exceptions.SecretError as e:
+            pass
 
 
 class TestBadPaths(unittest.TestCase):

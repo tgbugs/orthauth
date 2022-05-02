@@ -4,9 +4,24 @@ class OrthauthError(Exception):
     """ base class for orthauth errors """
 
 
-class SecretAsKeyError(OrthauthError):
+class SecretError(OrthauthError):
+    """ base clasee for errors related to secrets files """
+
+
+class SecretAsKeyError(SecretError):
     """ Using a secret as a key in the path to another secret
         is a recipe for secrets getting committed to code. """
+
+
+class SecretPathError(SecretError):
+    """ Something is wrong with a config/auth/secret path spec
+        it might be too long, it might be too short, it might
+        contain a secret, etc. """
+
+
+class SecretEmptyError(SecretError):
+    """ Having empty paths in secret files is bad practice.
+        If we detect the issue at runtime we raise this error. """
 
 
 class UnknownAuthStoreType(OrthauthError):

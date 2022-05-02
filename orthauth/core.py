@@ -383,14 +383,20 @@ class ConfigBase:
         envars = []
         # env
         for evkey in ('environment-variables', 'env-vars', 'envars'):
+            # FIXME do we allow multiple keys like this or error if
+            # more than one is detected?
             if evkey in auth_variable_value:
-                ev = auth_variable_value[evkey]
-                if isinstance(ev, str):
-                    envars += ev.split(' ')
-                elif isinstance(ev, list):
-                    envars += ev
-                else:
-                    raise TypeError(f'unsupported type {type(ev)}\n{ev}')
+                if evkey in auth_variable_value:
+                    ev = auth_variable_value[evkey]
+                    if isinstance(ev, str):
+                        envars += ev.split(' ')
+                    elif isinstance(ev, list):
+                        envars += ev
+                    else:
+                        # this is actually a type error because it means
+                        # something is wrong with the implementation not
+                        # with what the user did
+                        raise TypeError(f'unsupported type {type(ev)}\n{ev}')
 
         return envars
 
@@ -398,7 +404,8 @@ class ConfigBase:
     def _auth_paths(auth_variable_value):
         if 'config' in auth_variable_value:
             if [_ for _ in ('path', 'paths', 'paths-nested') if _ in auth_variable_value]:
-                raise TypeError('can only have config or path, not both')
+                msg = ('can only have config or path, not both')
+                raise exc.BadAuthConfigFormatError(msg)
 
             return []
 
@@ -412,6 +419,12 @@ class ConfigBase:
 
         if 'paths-nested' in auth_variable_value:
             raw_paths += list(branches(auth_variable_value['paths-nested']))
+
+        """
+        if 'path-default' in auth_variable_value:
+            # XXX NOTE internal use only
+            raw_paths += [auth_variable_value['path-default']]
+        """
 
         try:
             paths = list(parse_paths(raw_paths))
@@ -709,7 +722,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
             for i in self._include:
                 try:
                     return i.get(variable_name, **kwargs)
-                except KeyError as e:
+                except KeyError as e:  # is indeed a key error
                     error = e
             else:
                 if error is not None:
@@ -717,6 +730,9 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
         try:
             user_variable_value = self.user_config.get_blob('auth-variables', variable_name)
+            # we use get_blob to reduce the number of times we read from disk, we dereference
+            # the value in secrets below if there is one, but we defer that until later, so
+            # do not call self.user_config.get() at this point
             if user_variable_value is None:
                 user_variable_value = {}
                 f1 = TypeError(f'Value of {variable_name} is None'
@@ -752,12 +768,26 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
                 defaults.extend(user_variable_value)
             else:
+                #_uvv = user_variable_value
                 if for_path and user_variable_value is not None:
                     user_variable_value = self.user_config._pathit(user_variable_value)
 
                 defaults.append(user_variable_value)
 
             user_variable_value = {}
+                """
+                if isinstance(_uvv, str) and ' ' in _uvv:
+                    # user_variable_value could also be a config path
+                    # XXX HOWEVER, despite having implemented this we
+                    # are NOT going to enable it because it adds
+                    # massive ambiguity and thus performance cost even
+                    # limiting it to >= 2 element paths as we do here
+                    user_variable_value = {'path-default': _uvv}
+                else:
+                    user_variable_value = {}
+                # assigning this as such is part one of the solution
+                # then you have to deal with non-existent paths and indexing strings with strings
+                """
 
         # there is a limited use case for allowing users to set a value, if they also
         # want to define custom user set environment variables
@@ -821,7 +851,7 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
         envars = self._envars(user_variable_value)
         envars += self._envars(auth_variable_value)
-        paths = self._auth_paths(user_variable_value)
+        paths = self._auth_paths(user_variable_value)  # this is not expected to raise a KeyError
         paths += self._auth_paths(auth_variable_value)
 
         bads = self._single_alt_configs(auth_variable_value)  # for error purposes only
@@ -849,7 +879,20 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
                 else:
                     return d[0]
 
+        """
+        # XXX this is a horrible implementation
+        _udp = (user_variable_value['path-default']
+                if 'path-default' in user_variable_value else False)
+        def _get_path_fail_ok(v, _f=get_uc, udp=_udp):
+            try:
+                return _f(v)
+            except exc.SecretError as e:
+                if v != udp:
+                    raise e
+        """
+
         for f, v in zip((getenv,
+                         #_get_path_fail_ok if _udp else get_uc,
                          get_uc,
                          self.user_config._gsac_wrap,
                          get_default),
@@ -967,6 +1010,7 @@ class UserConfig(ConfigBase):
 
     def get(self, variable_name, *args, **kwargs):
         """ look up the value of a variable name from auth store or config """
+        # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX this is NOT CALLED by AuthConfig.get !!!!!!!!!!!!!!!
         # ah the problem of interleveing values from sources of different rank ...
         for_list = 'for_list' in kwargs and kwargs['for_list']
         for_path = 'for_path' in kwargs and kwargs['for_path']
@@ -1003,8 +1047,17 @@ class UserConfig(ConfigBase):
                 else:
                     return d[0]
 
+        """
+        def _get_path_fail_ok(v, _f=self._get_path if for_path else self._get):
+            try:
+                return _f(v)
+            except exc.SecretError as e:
+                pass
+        """
+
         for f, v in zip((getenv,
                          self._get_path if for_path else self._get,
+                         #_get_path_fail_ok,
                          self._gsac_wrap,
                          get_default),
                         (envars, paths, alt, defaults)):
@@ -1028,17 +1081,17 @@ class UserConfig(ConfigBase):
             auth_store = self.path_source(*names)  # FIXME perf issue incoming
             try:
                 return auth_store._path, auth_store(*names)
-            except KeyError as e:
+            except exc.SecretError as e:
                 errors.append(e)
                 logd.error(f'broken path {names}')
                 if auth_store != secrets:
                     try:
                         return secrets._path, secrets(*names)
-                    except KeyError as e:
+                    except exc.SecretError as e:
                         errors.append(e)
 
         if errors:
-            raise KeyError(f'{[e.args[0] for e in errors]}') from errors[-1]
+            raise exc.SecretError(f'{[e.args[0] for e in errors]}') from errors[-1]
 
     def _gsac_wrap(self, args):
         return self._get_single_alt_config(*args)
@@ -1082,8 +1135,9 @@ class UserConfig(ConfigBase):
             _test.pop('alt-config')
             rename = _test.pop('rename', None)
             if _test:
-                raise ValueError('configs with top level alt-config may '
-                                f'have only a rename section\n{_test}')
+                msg = ('configs with top level alt-config may '
+                       f'have only a rename section\n{_test}')
+                raise exc.BadAuthConfigFormatError(msg)
 
             self._c_alt_config = self._from_user_alt_config(path,
                                                             self.auth_config,
