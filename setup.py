@@ -19,7 +19,7 @@ with open('README.md', 'rt') as f:
     long_description = f.read()
 
 yaml_requires = ['pyyaml']
-sxpr_requires = ['sxpyr']
+sxpr_requires = ['sxpyr>=0.0.2']
 tests_require = ['pytest', 'pytest-runner'] + yaml_requires + sxpr_requires
 setup(name='orthauth',
       version=__version__,
