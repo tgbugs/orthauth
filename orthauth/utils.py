@@ -2,9 +2,18 @@ import os
 import logging
 from . import exceptions as exc
 
+try:
+    from sxpyr import sxpyr
+except ImportError as e:
+    pass
+
+
+def python_to_sxpr(thing):
+    pl = sxpyr.python_to_sxpr(thing)
+    return pl._print(sxpyr.print_plist)
+
 
 def sxpr_to_python(string):
-    from sxpyr import sxpyr
     parse_plist = sxpyr.configure(**sxpyr.conf_plist)  # FIXME error on lack of **
     read_plist = sxpyr.conf_read(parse_plist, sxpyr.WalkPl)
     def cf(ast):

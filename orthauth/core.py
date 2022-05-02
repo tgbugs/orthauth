@@ -11,7 +11,7 @@ from pprint import pformat
 from . import stores
 from . import exceptions as exc
 from .utils import branches, getenv, parse_paths
-from .utils import log, logd, sxpr_to_python
+from .utils import log, logd, sxpr_to_python, python_to_sxpr
 
 # TODO multi-get to reduce reads via context manager maybe?
 

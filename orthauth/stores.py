@@ -91,7 +91,7 @@ class Secrets:
 
             if blob is None:
                 msg = (f'The config at {self.filename!r} '
-                        'should not be empty!')
+                       'should not be empty!')
                 raise exc.EmptyConfigError(msg)
 
             return QuietDict(blob)  # XXX NOTE quiet is not recursive

@@ -225,6 +225,9 @@ class TestMakeUserConfig(unittest.TestCase):
     def test_serialize_yaml(self):
         self._roundtrip('yaml')
 
+    def test_serialize_sxpr(self):
+        self._roundtrip('sxpr')
+
 
 class TestWithStores(unittest.TestCase):
     def setUp(self):

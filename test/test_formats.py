@@ -81,9 +81,7 @@ class TestFormats(unittest.TestCase):
         try:
             with open(test_folder / 'auth-config-1.yaml', 'rt') as f, open(path, 'wt') as o:
                 d = yaml.safe_load(f)
-                pl = sxpyr.python_to_sxpr(d)
-                out = pl._print(sxpyr.print_plist)
-                o.write(out)
+                o.write(oa.utils.python_to_sxpr(d))
 
             config = self._config(path.name)
             self._do_test(config)
