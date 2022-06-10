@@ -1049,7 +1049,7 @@ class UserConfig(ConfigBase):
                         errors.append(e)
 
         if errors:
-            raise exc.SecretError(f'{[e.args[0] for e in errors]}') from errors[-1]
+            raise exc.SecretError(*[e.args[0] for e in errors]) from errors[-1]
 
     def _gsac_wrap(self, args):
         return self._get_single_alt_config(*args)
