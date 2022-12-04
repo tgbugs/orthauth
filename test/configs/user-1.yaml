@@ -9,12 +9,15 @@ auth-stores:  # per user config only 1 source per type
     path: ~/.authinfo
   mypass:
     path: ~/.mypass
+  netrc:
+    path: netrc-1
   ssh-config:
     path: ~/.ssh/config
   other:
     key-relevant-for-some-non-file-based-store
 path-sources:  # on failure to match only the secrets store is searched
   mysql: mypass
+  mach1 user1: netrc  # this is the user config so we redirect
   magithub: authinfo
   magithub other: secrets
   hrm does this: secrets
@@ -93,3 +96,9 @@ auth-variables:
   test-get-list-default-and-user: ['user']
   test-key-only-in-user-config: null
   test-key-only-in-user-config-not-null: hello
+  test-netrc-1:
+    # we could put put the path source here as well
+    # but keeping the decoupled seems ... better maybe?
+    # hard to know
+    # source: netrc
+    path: mach1 user1

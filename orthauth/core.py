@@ -932,6 +932,7 @@ class UserConfig(ConfigBase):
                 'secrets': self._secrets,
                 'authinfo': self._authinfo,
                 'mypass': self._mypass,
+                'netrc': self._netrc,
                 'ssh-config': self._ssh_config,
             }[type_]
         except KeyError as e:
@@ -968,6 +969,9 @@ class UserConfig(ConfigBase):
 
     def _mypass(self, blob):
         return self._get_store(stores.Mypass, blob)
+
+    def _netrc(self, blob):
+        return self._get_store(stores.Netrc, blob)
 
     def _ssh_config(self, blob):
         return self._get_store(stores.SshConfig, blob)

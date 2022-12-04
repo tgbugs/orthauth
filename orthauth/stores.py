@@ -1,5 +1,6 @@
 import os
 import stat
+import netrc
 import pathlib
 from . import exceptions as exc
 from .utils import QuietDict, log, sxpr_to_python
@@ -30,6 +31,37 @@ class Mypass:
 
     def __call__(self, *names):
         raise NotImplementedError('TODO')
+
+
+class Netrc:
+    def __init__(self, path):
+        if isinstance(path, str):
+            path = pathlib.Path(path)
+
+        self._path = path
+
+    @property
+    def filename(self):
+        return self._path.as_posix()
+
+    @property
+    def exists(self):
+        """ Fail early and often when missing a file that is supposed to exist """
+        e = self._path.exists()
+        if not e:
+            raise FileNotFoundError(self._path)
+
+        return e
+
+    def __call__(self, *names):
+        machine, user = names
+        nc = netrc.netrc(self._path)
+        userf, act, passwd = nc.authenticators(machine)
+        if user == userf:
+            return passwd
+        else:
+            msg = 'This secret path does not exist.'
+            raise exc.SecretPathError(msg)
 
 
 class SshConfig:

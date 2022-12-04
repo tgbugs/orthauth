@@ -193,6 +193,10 @@ class TestSimple(unittest.TestCase):
         except KeyError as e:
             pass
 
+    def test_netrc_1(self):
+        tv = self.auth.get('test-netrc-1')
+        assert tv == 'pass1'
+
 
 class TestMakeUserConfig(unittest.TestCase):
     def setUp(self):

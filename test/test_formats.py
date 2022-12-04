@@ -28,6 +28,17 @@ class TestFormats(unittest.TestCase):
         ablob = source.load()
         ublob = source.user_config.load()
 
+        def fix(v):
+            if 'path' in v:
+                p = test_folder.__class__(v['path'])
+                if not p.expanduser().is_absolute():
+                    np = test_folder / p
+                    v['path'] = np.as_posix()
+
+        # don't overwrite auth-stores, will break things due to missing runtime key
+        # in auth-stores, but not entirely sure how or why
+        {k:fix(v) for k, v in ublob['auth-stores'].items()}
+
         with open(test_folder / 'secrets-test-1.yaml', 'rt') as f:  # please never do this irl
             sblob = yaml.safe_load(f)
 
