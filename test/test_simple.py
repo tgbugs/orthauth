@@ -197,6 +197,14 @@ class TestSimple(unittest.TestCase):
         tv = self.auth.get('test-netrc-1')
         assert tv == 'pass1'
 
+    def test_authinfo_1(self):
+        tv = self.auth.get('test-authinfo-1')
+        assert tv == 'pass1'
+
+    def test_authinfo_2(self):
+        tv = self.auth.get('test-authinfo-2')
+        assert tv == 'pass2'
+
 
 class TestMakeUserConfig(unittest.TestCase):
     def setUp(self):

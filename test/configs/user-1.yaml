@@ -6,7 +6,7 @@ auth-stores:  # per user config only 1 source per type
                               # containing this user-1.yaml file)
     # path: '{:user-config-path}/orthauth/secrets.yaml'  # default ...
   authinfo:
-    path: ~/.authinfo
+    path: authinfo-1
   mypass:
     path: ~/.mypass
   netrc:
@@ -19,6 +19,8 @@ path-sources:  # on failure to match only the secrets store is searched
   mysql: mypass
   mach1 user1: netrc  # this is the user config so we redirect
   magithub: authinfo
+  localhost usera: authinfo
+  localhost 123456 userb: authinfo
   magithub other: secrets
   hrm does this: secrets
 auth-variables:
@@ -102,3 +104,7 @@ auth-variables:
     # hard to know
     # source: netrc
     path: mach1 user1
+  test-authinfo-1:
+    path: localhost usera
+  test-authinfo-2:
+    path: localhost 123456 userb

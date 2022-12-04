@@ -11,17 +11,6 @@ except ImportError as e:
     pass
 
 
-class Authinfo:
-    def __init__(self, path):
-        if isinstance(path, str):
-            path = pathlib.Path(path)
-
-        self._path = path
-
-    def __call__(self, *names):
-        raise NotImplementedError('TODO')
-
-
 class Mypass:
     def __init__(self, path):
         if isinstance(path, str):
@@ -237,6 +226,52 @@ class Secrets:
                 raise exc.SecretEmptyError(msg)
 
             return current
+
+
+class Authinfo(Secrets):
+
+    def __init__(self, path):
+        if isinstance(path, str):
+            path = pathlib.Path(path)
+
+        self._path = path
+
+    @property
+    def name_id_map(self):
+        # XXX we do not support passwords with spaces right now
+        with open(self._path, 'rt') as f:
+            lines = f.readlines()
+        hrm = [l.strip().split() for l in lines if not l.startswith('default')]
+        def convk(k):
+            convd = {'machine': 'host',
+                     'login': 'user',
+                     'account': 'user',
+                     'protocol': 'port',
+                     'password': 'secret',}
+            if k in convd:
+                return convd[k]
+
+            return k
+
+        ld = [{convk(k):v for k, v in zip(l[:-1:2], l[1::2])} for l in hrm]
+        order = 'host', 'port', 'user', 'secret'
+        hier = {}
+        for d in ld:
+            if 'host' not in d or 'user' not in d or 'secret' not in d:
+                msg = f'malformed file missing host, user, or secret {self._path}'
+                raise exc.SecretError(msg)
+            nest = hier
+            for k in order[:-1]:
+                if k in d:
+                    if d[k] not in nest:
+                        if k == order[-2]:
+                            nest[d[k]] = d[order[-1]]
+                        else:
+                            nest[d[k]] = {}
+
+                    nest = nest[d[k]]
+
+        return QuietDict(hier)
 
 
 class Runtime(Secrets):
