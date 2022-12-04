@@ -1,0 +1,4 @@
+default login userd password passd
+machine mach1 login user1 password pass1
+# machine mach1 login user3 password pass3  # bad news, last one wins in python
+machine mach2 login user2 password pass2
