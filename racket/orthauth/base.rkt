@@ -140,6 +140,10 @@
 
 ;; dereference values
 
+(define (raw-path? path-string)
+  (or (absolute-path? path-string)
+      (string-prefix? path-string "{:")))
+
 ; FIXME these have to handle the #:path #t case because non-existent paths are failures for get-path
 (define (deref-sath v secrets [secrets-path #f])
   ; sath -> secrets path avoid name collision
@@ -153,7 +157,7 @@
     (if secrets-path
         ; FIXME do we disallow format-path-string in secrets? I think we do?
         ; FIXME stupid pssp issues
-        (if (absolute-path? raw-value)
+        (if (raw-path? raw-value)
             raw-value
             (path->string (simple-form-path (build-path secrets-path 'up raw-value))))
         raw-value)))
@@ -175,7 +179,7 @@
     [(default)
      (if config-path
          ; FIXME stupid pssp issues
-         (if (absolute-path? v)
+         (if (raw-path? v)
              v
              (path->string (simple-form-path (build-path config-path 'up v))))
          v)]
@@ -259,7 +263,7 @@
                                               uv
                                               (hash 'default uv)))))])
             (values k v))]
-         [normf (if (and path path-exists)
+         [normf (if path
                     (λ (p) ; XXX lurking hard in here
                       #;
                       (println (list 'get-λ p) )
@@ -269,6 +273,7 @@
                              (println (list 'get-λ-ep ep) )
                              (and
                               (or
+                               (not path-exists)
                                (file-exists? ep)
                                (directory-exists? ep))
                               ep)
