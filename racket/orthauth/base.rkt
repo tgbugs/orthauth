@@ -152,9 +152,10 @@
     (println (list 'deref-sath: raw-value 'sp: secrets-path))
     (if secrets-path
         ; FIXME do we disallow format-path-string in secrets? I think we do?
-        ; build-path will discard secrets and up if raw-value is an absolute path
         ; FIXME stupid pssp issues
-        (path->string (simple-form-path (build-path secrets-path 'up raw-value)))
+        (if (absolute-path? raw-value)
+            raw-value
+            (path->string (simple-form-path (build-path secrets-path 'up raw-value))))
         raw-value)))
 
 (define (deref-envars v)
@@ -174,7 +175,9 @@
     [(default)
      (if config-path
          ; FIXME stupid pssp issues
-         (path->string (simple-form-path (build-path config-path 'up v)))
+         (if (absolute-path? v)
+             v
+             (path->string (simple-form-path (build-path config-path 'up v))))
          v)]
     [else (error 'todo "oops ~s ~s" k v)]
     ))
@@ -222,10 +225,10 @@
 
 ;; external api
 
-(define (get-path auth-config auth-variable)
-  (get auth-config auth-variable #t))
+(define (get-path auth-config auth-variable #:exists? [exists #t])
+  (get auth-config auth-variable #t exists))
 
-(define (get auth-config auth-variable [path #f])
+(define (get auth-config auth-variable [path #f] [path-exists #t])
   (let* ([av (with-handlers ([exn:fail:contract? (λ (e) #f)]) ; FIXME don't squash all errors here!!?!?
                ; XXX reminder: we catch errors here as well because we don't want to fail if a
                ; user adds a value to their config and retrieves it as a workaround but we
@@ -256,7 +259,7 @@
                                               uv
                                               (hash 'default uv)))))])
             (values k v))]
-         [normf (if path
+         [normf (if (and path path-exists)
                     (λ (p) ; XXX lurking hard in here
                       #;
                       (println (list 'get-λ p) )
@@ -270,8 +273,7 @@
                                (directory-exists? ep))
                               ep)
                              )))
-                    identity)]
-         )
+                    identity)])
     #;
     (list av uv combined)
     (for/or ([key '(path environment-variables default)])
