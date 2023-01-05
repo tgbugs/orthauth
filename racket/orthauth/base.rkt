@@ -4,9 +4,12 @@
  ; primary user facing functions
  get
  get-path
+ get-sath
  current-auth-config-path
  current-auth-config
 
+ user-config-path
+ secrets-path
  ;; these probably should not be provided because they can lead to
  ;; extremely confusing behavior if they are accidentally set by default
  ; current-user-config-path
@@ -149,12 +152,15 @@
   ; sath -> secrets path avoid name collision
   (let* ([sympath
          (cond [(string? v) (map string->symbol (string-split v " "))]
-               [(list? v) (map string->symbol v)]
+               [(list? v) (map (λ (s) (if (string? s) (string->symbol s) s)) v)]
                [else (error 'wat-def-path "wat ~s" v)])]
+         [_ (println (list 'ds: sympath))]
          [raw-value (hash-ref*-rec secrets sympath)])
     #;
     (println (list 'deref-sath: raw-value 'sp: secrets-path))
     (if secrets-path
+        ; FIXME I'm pretty sure that it should be considered a bug to ever store paths in secrets?
+        ; the only reason we do it right now is to leverage relative paths ...
         ; FIXME do we disallow format-path-string in secrets? I think we do?
         ; FIXME stupid pssp issues
         (if (raw-path? raw-value)
@@ -228,6 +234,12 @@
   ((string->path->file-type->reader sp) sp))
 
 ;; external api
+
+(define (get-sath . path)
+  (get-sath-int path))
+
+(define (get-sath-int path)
+  (deref-sath path (read-secrets)))
 
 (define (get-path auth-config auth-variable #:exists? [exists #t])
   (get auth-config auth-variable #t exists))
@@ -312,4 +324,9 @@
         #;
         (println (list 'sec: sec))
         sec)))
+
+  (parameterize ([current-secrets-path "../../test/configs/secrets-test-1.yaml"])
+    (println (read-secrets))
+    (get-sath 'api 'some-user))
+
   )
