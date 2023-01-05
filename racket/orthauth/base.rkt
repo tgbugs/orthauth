@@ -154,7 +154,6 @@
          (cond [(string? v) (map string->symbol (string-split v " "))]
                [(list? v) (map (λ (s) (if (string? s) (string->symbol s) s)) v)]
                [else (error 'wat-def-path "wat ~s" v)])]
-         [_ (println (list 'ds: sympath))]
          [raw-value (hash-ref*-rec secrets sympath)])
     #;
     (println (list 'deref-sath: raw-value 'sp: secrets-path))
