@@ -227,7 +227,7 @@
          [secrets-path (if csp csp (hash-ref*
                                     (or (current-user-config) (read-user-config))
                                     'auth-stores 'secrets 'path))])
-    (path->string (simple-form-path (expand-user-path secrets-path)))))
+    (path->string (simple-form-path (expand-user-path (format-path-string secrets-path))))))
 
 (define (read-secrets)
   (define sp (secrets-path))
