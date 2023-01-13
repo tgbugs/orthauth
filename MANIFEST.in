@@ -1,7 +1,10 @@
 recursive-include test *
+recursive-include docs *
+recursive-include orthauth *
 exclude .gitignore
 exclude .travis.yml
 exclude MANIFEST.in
+recursive-exclude racket *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo
