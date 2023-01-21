@@ -568,7 +568,17 @@ class AuthConfig(DecoBase, ConfigBase):  # FIXME this is more a schema?
 
         # if no config exists automatically create the default
         ucp = ucps[0]  # you MUST have a user config path
-        self.write_user_config(ucp=ucp)
+        try:
+            self.write_user_config(ucp=ucp)
+        except FileExistsError:
+            # XXX there is a race condition here >_<
+            # where multiple seprate processes starting at
+            # the same time may try to create the empty config
+            # so even though in theory we check up there, some
+            # process will win and the rest will fail, and as
+            # a result we have to catch and ignore the error
+            pass
+
         return ucp
 
     def load(self):
