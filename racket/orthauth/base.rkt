@@ -241,7 +241,7 @@
   (deref-sath path (read-secrets)))
 
 (define (get-path auth-config auth-variable #:exists? [exists #t])
-  (get auth-config auth-variable #t exists))
+  (string->path (get auth-config auth-variable #t exists)))
 
 (define (get auth-config auth-variable [path #f] [path-exists #t])
   (let* ([av (with-handlers ([exn:fail:contract? (λ (e) #f)]) ; FIXME don't squash all errors here!!?!?
