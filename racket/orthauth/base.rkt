@@ -242,7 +242,11 @@
 
 (define (get-path auth-config auth-variable #:exists? [exists #t])
   (let ([string-path (get auth-config auth-variable #t exists)])
-    (and string-path (string->path string-path))))
+    (and string-path
+         (let ([list-path
+                (for/list ([e (in-list (string-split string-path "/" #:trim? #f))])
+                  (if (string=? e "") "/" e))])
+           (apply build-path list-path)))))
 
 (define (get auth-config auth-variable [path #f] [path-exists #t])
   (let* ([av (with-handlers ([exn:fail:contract? (λ (e) #f)]) ; FIXME don't squash all errors here!!?!?
