@@ -27,8 +27,9 @@
 (require
  "formats.rkt"
  (prefix-in paths/ "paths.rkt")
+ (only-in "utils.rkt" call-with-environment)
  (only-in json json-null)
- (only-in racket/function thunk identity)
+ (only-in racket/function identity)
  (only-in racket/class get-field)
  (only-in racket/string string-replace string-prefix? string-split)
  (only-in racket/file file->string)
@@ -101,45 +102,6 @@
 
 (define (craise type who-sym format-str . v)
   (raise (type (apply format (string-append "~s: " format-str) who-sym v) (current-continuation-marks))))
-
-(define (call-with-environment value-thunk envar-pairs)
-  ; having read basically the whole Continuations in Common Lisp (with apologies)
-  ; thread, and reread the racket documents on dynamic-wind I think that it does
-  ; what we want in this case because any continuation nonsense that is going on
-  ; that jumps out of the primary code should have the environment variable unset
-  ; because only code inside the value-thunk should see that particular environment
-  (let ([env (current-environment-variables)]
-        [backup (make-hash)])
-    (dynamic-wind
-      (thunk
-       (for ([key-value envar-pairs])
-         (let ([key (car key-value)]
-               [value (cdr key-value)])
-           (hash-set! backup key (getenv key))
-           (putenv key value))))
-      value-thunk
-      (thunk
-       (for ([key-value envar-pairs])
-         (let* ([key (car key-value)]
-                [value (hash-ref backup key)])
-           (environment-variables-set!
-            env
-            (if (string? key)
-                (string->bytes/utf-8 key)
-                key)
-            (if (string? value)
-                (string->bytes/utf-8 value)
-                value))
-           (hash-remove! backup key)))))))
-
-(module+ test-cwe
-  (current-auth-config-path "~/git/pyontutils/pyontutils/auth-config.py")
-  (let ([ac (read-auth-config)])
-    (list
-     (call-with-environment
-      (λ () (get ac 'resources))
-      '(("RESOURCES" . "/tmp/sigh")))
-     (get ac 'resources))))
 
 ;; dereference values
 
@@ -312,6 +274,15 @@
           ; the source of the value we are examining
           (deref-value key v user-config (and path (user-config-path)))))
         ))))
+
+(module+ test-cwe
+  (current-auth-config-path "~/git/pyontutils/pyontutils/auth-config.py")
+  (let ([ac (read-auth-config)])
+    (list
+     (call-with-environment
+      (λ () (get ac 'resources))
+      '(("RESOURCES" . "/tmp/sigh")))
+     (get ac 'resources))))
 
 (module+ test
   (for/list ([sp '("../../test/configs/secrets-test-1.yaml"

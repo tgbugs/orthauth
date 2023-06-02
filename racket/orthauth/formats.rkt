@@ -1,15 +1,15 @@
 #lang racket/base
 
 (provide
+ plist->hash
  string->path->jsexpr
  string->path->py->jsexpr
  string->path->yaml->jsexpr
  string->path->sxpr->jsexpr)
 
 (require
+ (only-in "utils.rkt" plist->hash)
  yaml  ; yes this is also a libyaml wrapper
- (only-in racket/list drop-right)
- (only-in racket/string string-trim)
  (only-in json json-null read-json)
  python/parse
  (only-in python/compile compile-expression)
@@ -17,26 +17,6 @@
  (for-syntax racket/base racket/syntax))
 
 ;; sxpr
-
-(define (plist->hash plist)
-  (if (list? plist)
-      (for/hash ([(key value)
-                  (in-parallel
-                   (in-list (drop-right plist 1))
-                   (in-list (cdr plist)))]
-                 [i (in-naturals)]
-                 #:when (even? i))
-        (let* ([skey
-                ; XXX not clear whether we should do this, for sxpr we
-                ; do in python but not in the elisp or cl versions
-                ; ... but the values are keywords that case and we
-                ; access the plists directly in elisp/cl here we
-                ; convert to a hash table
-                (if (symbol? key)
-                    (string->symbol (string-trim (symbol->string key) ":" #:left? #t #:right? #f))
-                    key)])
-          (values skey (plist->hash value))))
-      plist))
 
 (define (string->path->sxpr->jsexpr path-string)
   ; XXX 1 vs n expressions
