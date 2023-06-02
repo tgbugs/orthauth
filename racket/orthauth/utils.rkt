@@ -6,7 +6,7 @@
 
 (require
  (only-in racket/list drop-right)
- (only-in racket/string string-trim))
+ (only-in racket/string string-trim string-prefix?))
 
 (define (call-with-environment value-thunk envar-pairs)
   ; having read basically the whole Continuations in Common Lisp (with apologies)
@@ -40,20 +40,23 @@
 
 (define (plist->hash plist)
   (if (and (list? plist) (not (null? plist)))
-      (for/hash ([(key value)
-                  (in-parallel
-                   (in-list (drop-right plist 1))
-                   (in-list (cdr plist)))]
-                 [i (in-naturals)]
-                 #:when (even? i))
-        (let* ([skey
-                ; XXX not clear whether we should do this, for sxpr we
-                ; do in python but not in the elisp or cl versions
-                ; ... but the values are keywords that case and we
-                ; access the plists directly in elisp/cl here we
-                ; convert to a hash table
-                (if (symbol? key)
-                    (string->symbol (string-trim (symbol->string key) ":" #:left? #t #:right? #f))
-                    key)])
-          (values skey (plist->hash value))))
+      (let ([cpl (car plist)])
+        (if (and (symbol? cpl) (string-prefix? (symbol->string cpl) ":"))
+            (for/hash ([(key value)
+                        (in-parallel
+                         (in-list (drop-right plist 1))
+                         (in-list (cdr plist)))]
+                       [i (in-naturals)]
+                       #:when (even? i))
+              (let* ([skey
+                      ; XXX not clear whether we should do this, for sxpr we
+                      ; do in python but not in the elisp or cl versions
+                      ; ... but the values are keywords that case and we
+                      ; access the plists directly in elisp/cl here we
+                      ; convert to a hash table
+                      (if (symbol? key)
+                          (string->symbol (string-trim (symbol->string key) ":" #:left? #t #:right? #f))
+                          key)])
+                (values skey (plist->hash value))))
+            (map plist->hash plist)))
       plist))
