@@ -21,7 +21,7 @@
                      ; osx is still stuck on 2.7 by default so need brew
                      ; but for whatever reason find-executable-path is not brew aware
                      ; circa 2023 you may need to brew install python3 explicitly
-                     ((macosx) "/usr/local/bin/python3")
+                     ((macosx) (find-executable-path "python3")) ; brew changed python3 install location in newer versions ?? sigh
                      ((unix) (or (find-executable-path "pypy3") "python"))
                      (else (error "uhhhhh? beos is this you?"))))])
       (or interp (error "no python interpreter found!"))))))
