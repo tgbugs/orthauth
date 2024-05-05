@@ -106,7 +106,7 @@
 ;; dereference values
 
 (define (raw-path? path-string)
-  (or (absolute-path? path-string)
+  (or (absolute-path? (expand-user-path path-string))
       (string-prefix? path-string "{:")))
 
 ; FIXME these have to handle the #:path #t case because non-existent paths are failures for get-path
@@ -163,14 +163,18 @@
 
 (define (user-config-path)
   (let* ([cucp (current-user-config-path)]
-         [user-config-paths (or
-                             (and cucp (list cucp))
-                             (map format-path-string
-                                  (hash-ref*
-                                   (or
-                                    (current-auth-config)
-                                    (read-auth-config))
-                                   'config-search-paths)))])
+         [user-config-paths
+          (or
+           (and cucp (list cucp))
+           (map (λ (p)
+                  (if (raw-path? p)
+                      (format-path-string p)
+                      (path->string (simple-form-path (build-path (current-auth-config-path) 'up p)))))
+                (hash-ref*
+                 (or
+                  (current-auth-config)
+                  (read-auth-config))
+                 'config-search-paths)))])
     (for/or ([ucp user-config-paths]
              ; FIXME likely need to string->path ucp here too
              #:when (and ucp (file-exists? ucp)))
@@ -205,9 +209,24 @@
 (define (get-path auth-config auth-variable #:exists? [exists #t])
   (let ([string-path (get auth-config auth-variable #t exists)])
     (and string-path
-         (let ([list-path
-                (for/list ([e (in-list (string-split string-path "/" #:trim? #f))])
-                  (if (string=? e "") "/" e))])
+         (let* ([-list-path
+                (for/list
+                    ([e (in-list
+                         (string-split
+                          ; FIXME spps
+                          (path->string (path->directory-path (expand-user-path string-path)))
+                          "/" #:trim? #f))]
+                           )
+                  (if (string=? e "") "/" e))]
+                [-revlp (reverse -list-path)]
+                [list-path
+                 ; FIXME this is SO DUMB
+                 ; because it silently modifies paths with trailing slash ...
+                 ; why do all lisps suck at handling trailing slashs in paths :/
+                 ; also LOL (expand-user-path "~") behavior
+                 (if (string=? (car -revlp) "/")
+                     (reverse (cdr -revlp))
+                     -list-path)])
            (apply build-path list-path)))))
 
 (define (get auth-config auth-variable [path #f] [path-exists #t])
@@ -285,6 +304,16 @@
      (get ac 'resources))))
 
 (module+ test
+
+  (for/list ([acp '("../../test/configs/auth-config-1.yaml")])
+    ; FIXME spps as is tradition
+    (parameterize ([current-auth-config-path (path->string (resolve-path acp))])
+      (let ([ac (read-auth-config)])
+        (list
+         (get ac 'test-expanduser)
+         (get-path ac 'test-expanduser #:exists? #f)
+         ))))
+
   (for/list ([sp '("../../test/configs/secrets-test-1.yaml"
                    "../../test/configs/secrets-empty.yaml"
                    "../../test/secrets/secrets-2.yaml"

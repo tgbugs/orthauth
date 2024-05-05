@@ -36,11 +36,18 @@
 ;; yaml
 
 (define (yaml->jsexpr yaml)
-  (make-hash (hash-map yaml (λ (k v)
-                              (cons (string->symbol k)
-                                    (if (hash? v)
-                                        (yaml->jsexpr v)
-                                        v))))))
+  (make-hash
+   (hash-map
+    yaml
+    (λ (k v)
+      (cons
+       (cond
+         [(string? k) (string->symbol k)]
+         [(number? k) (string->symbol (number->string k))]
+         [else (error "what did yaml do this time?")])
+       (if (hash? v)
+           (yaml->jsexpr v)
+           v))))))
 
 (define (string->path->yaml->jsexpr path-string)
   (let ([yaml (file->yaml (expand-user-path (string->path path-string)))])
@@ -66,9 +73,13 @@
   ;; FIXME code duplication from yaml->jsexpr
   (cond [(list? py) (map py->jsexpr py)]
         [(hash? py)
-         (make-hash (hash-map py (λ (k v)
-                                   (cons (string->symbol k)
-                                         (py->jsexpr v)))))]
+         (make-hash
+          (hash-map
+           py
+           (λ (k v)
+             (cons
+              (string->symbol k)
+              (py->jsexpr v)))))]
         [(eq? py :None) (json-null)]
         [else py]))
 
