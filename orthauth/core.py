@@ -279,7 +279,8 @@ class ConfigBase:
                 raise empty_error from e
             except SyntaxError as e:
                 if (e.msg in ('unexpected EOF while parsing', 'invalid syntax') and
-                    e.offset == 0):
+                    (e.offset == 0 or
+                     (e.offset is None and e.lineno == 0))):
                     raise empty_error from e
                 else:
                     raise e
