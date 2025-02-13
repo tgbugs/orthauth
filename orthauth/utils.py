@@ -13,9 +13,24 @@ def python_to_sxpr(thing):
     return pl._print(sxpyr.print_plist)
 
 
+class WalkPlUnicode(sxpyr.WalkPl):
+
+    def estring(self, ast):
+        def dialect_escapes(sev):
+            if sev not in 'ux':
+                msg = f'escape not supported {sev}'
+                raise NotImplementedError(msg)
+
+            return '\\' + sev
+
+        out = sxpyr.String(ast.value(dialect_escapes).encode().decode('unicode-escape'))
+        out._unescaped = ast
+        return out
+
+
 def sxpr_to_python(string):
     parse_plist = sxpyr.configure(**sxpyr.conf_plist)  # FIXME error on lack of **
-    read_plist = sxpyr.conf_read(parse_plist, sxpyr.WalkPl)
+    read_plist = sxpyr.conf_read(parse_plist, WalkPlUnicode)
     def cf(ast):
         sxpyr  # yay scoping rules
         if isinstance(ast, sxpyr.PList):
