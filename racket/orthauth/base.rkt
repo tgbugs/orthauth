@@ -13,9 +13,14 @@
  ;; these probably should not be provided because they can lead to
  ;; extremely confusing behavior if they are accidentally set by default
  ; current-user-config-path
- ; current-user-config
  ; current-secrets-path
- ; current-secrets
+
+ ;; despite issue with defaults, current-user-config and current-secrets
+ ;; are needed for parameterize when minimizinng reads from disk and
+ ;; ensuring that all values are read from a consistent on-disk state
+ ;; instead of from multiple different on disk states
+ current-user-config
+ current-secrets
 
  ; provided for integration testing and certain more technical use cases
  read-auth-config
@@ -141,7 +146,10 @@
   ; TODO
   (case k
     [(path) (parameterize ([current-user-config user-config])
-              (deref-sath v (read-secrets) (and config-path (secrets-path))))]
+              (deref-sath
+               v
+               (or (current-secrets) (read-secrets))
+               (and config-path (secrets-path))))]
     [(environment-variables) (deref-envars v)]
     [(default)
      (if config-path
@@ -204,7 +212,11 @@
   (get-sath-int path))
 
 (define (get-sath-int path)
-  (deref-sath path (read-secrets)))
+  (deref-sath
+   path
+   (or
+    (current-secrets)
+    (read-secrets))))
 
 (define (get-path auth-config auth-variable #:exists? [exists #t])
   (let ([string-path (get auth-config auth-variable #t exists)])
@@ -235,8 +247,11 @@
                ; user adds a value to their config and retrieves it as a workaround but we
                ; haven't added it to the core config
                (hash-ref* auth-config 'auth-variables auth-variable))]
-         [user-config (parameterize ([current-auth-config auth-config])
-                        (read-user-config))]
+         [user-config
+          (or (current-user-config)
+           (parameterize
+               ([current-auth-config auth-config])
+             (read-user-config)))]
          [uv (with-handlers ([exn:fail:contract? (λ (e) #f)]) ; FIXME don't squash all errors here!!?!?
                (hash-ref* user-config 'auth-variables auth-variable))]
          #;
